@@ -1,0 +1,17 @@
+[project]
+name = "borrowing-dating"
+version = "0.1.0"
+description = "Borrowing-aware Bayesian dating of language families"
+requires-python = ">=3.11"
+dependencies = ["numpy", "scipy", "pycldf", "matplotlib"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["sim", "pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["slow: long-running Monte Carlo checks", "data: requires downloaded raw data (make data)"]
