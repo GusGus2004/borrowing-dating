@@ -4,7 +4,14 @@
 set -euo pipefail
 
 BEAST_VERSION="2.7.7"   # last release with full per-platform bundles (incl. JRE)
-BABEL_VERSION="0.4.0"   # SDollo (MutationDeathModel) + lexical models; latest release
+# Package versions (CBAN). Babel pulls in BEAST.base/app 2.7.8 and BEASTLabs, so
+# these are pinned explicitly: the effective BEAST core is 2.7.8 on the 2.7.7 launcher/JRE.
+PACKAGES=(
+  "BEAST.base 2.7.8"
+  "BEAST.app 2.7.8"
+  "BEASTLabs 2.0.3"
+  "Babel 0.4.2"         # SDollo (MutationDeathModel) + lexical substitution models
+)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST="$HERE/beast2"
 URL_BASE="https://github.com/CompEvol/beast2/releases/download/v${BEAST_VERSION}"
@@ -37,6 +44,16 @@ fi
 # Packages go in a project-local directory, not ~/Library or ~/.beast.
 PKG="$HERE/beast2-packages"
 mkdir -p "$PKG"
-"$DEST/bin/packagemanager" -dir "$PKG" -add Babel -version "$BABEL_VERSION"
+for entry in "${PACKAGES[@]}"; do
+  read -r name ver <<<"$entry"
+  "$DEST/bin/packagemanager" -dir "$PKG" -add "$name" -version "$ver"
+done
+# Remove any other versions so exactly the pinned set is active.
+for entry in "${PACKAGES[@]}"; do
+  read -r name ver <<<"$entry"
+  for d in "$PKG/archive/$name"/*/; do
+    if [[ -d "$d" && "$(basename "$d")" != "$ver" ]]; then rm -rf "$d"; fi
+  done
+done
 "$DEST/bin/packagemanager" -dir "$PKG" -list | grep -E '^(BEAST|Babel)' || true
 echo "BEAST2 ${BEAST_VERSION} ready: $DEST/bin/beast  (packages: $PKG)"

@@ -10,3 +10,8 @@ data/derived/*
 !data/derived/.gitkeep
 env/beast2/
 env/beast2-packages/
+# BEAST2 run outputs
+*.log
+*.trees
+*.xml.state
+beast.out

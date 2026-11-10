@@ -2,7 +2,7 @@
 PY      := .venv/bin/python
 KAUFMAN := data/raw/kaufmanpmed/cldf/cldf-metadata.json
 
-.PHONY: all env data matrices sim test beast clean
+.PHONY: all env data matrices sim test beast beast-smoke clean
 
 all: env data matrices sim test
 
@@ -12,8 +12,15 @@ env: .venv/.done
 	.venv/bin/pip install -q -r env/requirements.lock.txt
 	touch $@
 
+BEAST   := $(CURDIR)/env/beast2/bin/beast -packagedir $(CURDIR)/env/beast2-packages
+
 beast:
 	./env/install_beast2.sh
+
+# Milestone 0 check: Babel's SDollo example, shortened to 2e5 states (~4 min).
+beast-smoke:
+	cd infer/beast/smoke && $(BEAST) -overwrite -seed 1 testSDollo.xml > beast.out 2>&1 \
+	    && tail -3 beast.out
 
 data: $(KAUFMAN)
 $(KAUFMAN):

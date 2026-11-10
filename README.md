@@ -14,7 +14,7 @@ See [`brief.md`](brief.md) for the full design.
 | `sim/sdollo.py`: stochastic Dollo cognate birth/loss, discrete/continuous gamma across concepts, uncorrelated lognormal relaxed clock | done, tested (analytic checks) |
 | `pipeline/cldf.py`: CLDF Wordlist export of simulations + ground truth; CLDF → cognate matrix (CSV/NEXUS) for simulated *and* real data | done, tested (pycldf validation, round trip) |
 | Mayan data (Lexibank `kaufmanpmed`) → cognate matrix | done |
-| BEAST2 pinned install script | written, not yet run |
+| BEAST2 pinned install + SDollo smoke test (`make beast-smoke`) | done: Babel's SDollo example runs to completion |
 | BEAST2 recovery of simulated ages / HPD coverage (milestone 1) | next |
 | Borrowing, phonology, pair HMM, Track B | not started (by design) |
 
@@ -26,7 +26,8 @@ make data     # fetch raw CLDF datasets at pinned commits into data/raw/
 make matrices # Mayan cognate matrix -> data/derived/kaufmanpmed/
 make sim      # example simulated dataset -> data/derived/sim/example/
 make test     # pytest
-make beast    # install BEAST 2.7.7 + Babel into env/ (project-local)
+make beast    # install BEAST2 + pinned packages into env/ (project-local)
+make beast-smoke  # short SDollo run to check BEAST2 works (~4 min)
 ```
 
 `make` with no target runs env, data, matrices, sim and test.
@@ -68,6 +69,18 @@ in descendants of its birth branch), missing-data coding and seed
 reproducibility. As a power check, a 5% error in the loss rate moves the
 shared-class statistic by about 15 standard errors.
 
+## BEAST2
+
+`env/install_beast2.sh` installs the BEAST 2.7.7 macOS/Linux bundle (launcher +
+JRE; no system Java needed) into `env/beast2/`, and the CBAN packages into
+`env/beast2-packages/`. These versions are pinned exactly: BEAST.base 2.7.8, BEAST.app 2.7.8,
+BEASTLabs 2.0.3, Babel 0.4.2. Babel requires BEAST.base 2.7.8, so the effective
+core is 2.7.8 running on the 2.7.7 launcher. Always pass
+`-packagedir env/beast2-packages` (the Makefile does).
+
+Timing note: the shortened SDollo example (24 taxa, 2×10⁵ states) takes about 225 s
+on an Apple-silicon laptop. That is the cost that motivates Track B.
+
 ## Data
 
 | Dataset | Source | Pinned commit | Notes |
@@ -94,13 +107,13 @@ by `make`.
 ## Layout
 
 ```
-env/          pinned Python lockfile; BEAST2 installer (BEAST 2.7.7, Babel 0.4.0)
+env/          pinned Python lockfile; BEAST2 installer
+infer/beast/  BEAST2 XML (smoke/ = shortened Babel SDollo example)
 data/raw/     fetched CLDF datasets (git-ignored, pinned commits)
 data/derived/ cognate matrices, simulated datasets (git-ignored, rebuilt by make)
 sim/          forward simulator: tree.py, sdollo.py (borrowing.py, phonology.py to come)
 pipeline/     CLDF I/O shared by real and simulated data
 scripts/      CLI entry points used by the Makefile
-infer/beast/  BEAST2 XML templates (milestone 1)
 infer/cpp/    Track B (later)
 hmm/          pair HMM (milestone 3)
 analysis/     bias curves, ROC, figures
