@@ -2,7 +2,7 @@
 
 Quantifying and correcting the effect of lexical borrowing on Bayesian
 divergence-time estimates, with a simulation benchmark and a Mayan case study.
-See [`brief.md`](brief.md) for the full design.
+The full project design is kept privately.
 
 ## Status
 

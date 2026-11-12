@@ -16,3 +16,4 @@ env/beast2-packages/
 *.xml.state
 beast.out
 env/jdk/
+brief.md
