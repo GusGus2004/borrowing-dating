@@ -18,7 +18,6 @@ import argparse
 import json
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +25,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from analysis.mcmc import ess, hpd, read_log  # noqa: E402
+from infer.beastrun import BEAST, run_all  # noqa: E402
 from infer.beastxml import draw_truth, is_relaxed, load_prior, render_xml, simulate_replicate  # noqa: E402
 from pipeline.cldf import read_cognate_matrix  # noqa: E402
 
@@ -33,7 +33,6 @@ from pipeline.cldf import read_cognate_matrix  # noqa: E402
 PRIOR: Path
 OUT: Path
 FIG = ROOT / "figures"
-BEAST = [str(ROOT / "env/beast2/bin/beast"), "-packagedir", str(ROOT / "env/beast2-packages")]
 
 # log column -> truth key
 PARAMS = {
@@ -80,24 +79,8 @@ def cmd_prepare(a) -> None:
 # ---------------------------------------------------------------------- run
 
 
-def _run_one(rep: Path, seed: int) -> str:
-    if (rep / "done").exists():
-        return f"{rep.name}: already done"
-    with open(rep / "beast.out", "w") as out:
-        r = subprocess.run(BEAST + ["-overwrite", "-seed", str(seed), "-threads", "1", "beast.xml"],
-                           cwd=rep, stdout=out, stderr=subprocess.STDOUT)
-    if r.returncode == 0:
-        (rep / "done").touch()
-        return f"{rep.name}: ok"
-    return f"{rep.name}: FAILED (exit {r.returncode})"
-
-
 def cmd_run(a) -> None:
-    reps = [r for r in rep_dirs() if not (r / "done").exists()]
-    print(f"{len(reps)} replicates to run with {a.jobs} jobs", flush=True)
-    with ThreadPoolExecutor(a.jobs) as pool:
-        for msg in pool.map(lambda r: _run_one(r, 7919 + int(r.name.split("_")[1])), reps):
-            print(msg, flush=True)
+    run_all(rep_dirs(), lambda r: 7919 + int(r.name.split("_")[1]), a.jobs)
 
 
 # ---------------------------------------------------------------------- prior check

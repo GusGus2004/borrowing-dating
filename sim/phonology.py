@@ -1,0 +1,171 @@
+"""Phoneme strings for simulated cognate classes, evolving by regular sound change.
+
+Forms are strings of single-character segments from :data:`INVENTORY`
+(``c`` = [tʃ], ``x`` = [x], ``j`` = [j]; ASCII keeps alignment code simple).
+
+* **Birth.** A new class gets a random protoform of 2-3 CV syllables with an
+  optional final consonant.
+* **Regular sound change.** Each lineage undergoes changes as a Poisson
+  process in calendar time (rate ``change_rate``). A change is a rule
+  ``x > y / context`` with ``y`` a phonetically plausible outcome of ``x``
+  (:data:`OUTCOMES`; ``""`` = deletion) and context one of: anywhere,
+  between vowels, word-initial, word-final, before a front vowel. The rule is
+  applied at that instant to *every* word the lineage carries; that
+  regularity is what lets the comparative method (and the pair HMM) spot
+  forms that do not fit.
+* **Sporadic change.** Independently, at rate ``sporadic_rate`` per concept
+  per lineage, one word of the lineage gets a one-segment substitution,
+  insertion or deletion (analogy, irregular developments, noise).
+* **Borrowing** (in :mod:`sim.borrowing`) copies the donor's current form;
+  from then on only the recipient's own changes apply to it.
+
+Targets are drawn from segments actually present in the lineage's words
+(weighted by frequency), so every change does something.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Optional
+
+import numpy as np
+
+VOWELS = "aeiou"
+CONSONANTS = "ptkqbdgmnsxhlrwjfvzc"
+INVENTORY = CONSONANTS + VOWELS
+FRONT = "ei"
+
+# Plausible outcomes of each segment under sound change ("" = loss).
+OUTCOMES: dict[str, list[str]] = {
+    "p": ["b", "f", "w"], "t": ["d", "s", "c"], "k": ["g", "x", "c", "q"], "q": ["k", "x", "h"],
+    "b": ["p", "v", "w", "m"], "d": ["t", "z", "r", "l"], "g": ["k", "x", "j", ""],
+    "m": ["n", "b"], "n": ["m", "l"], "s": ["h", "z", "c", ""], "x": ["h", "k", ""],
+    "h": ["", "x"], "l": ["r", "j", "n"], "r": ["l", "d", ""], "w": ["v", "b", "", "u"],
+    "j": ["", "c", "i"], "f": ["h", "p", "v"], "v": ["b", "w", "f"], "z": ["s", "r", "d"],
+    "c": ["s", "t", "k"],
+    "a": ["e", "o"], "e": ["i", "a"], "i": ["e", "j"], "o": ["u", "a"], "u": ["o", "w"],
+}
+CONTEXTS = ("any", "intervocalic", "initial", "final", "before_front")
+_V = f"[{VOWELS}]"
+
+
+@dataclass(frozen=True)
+class PhonologyParams:
+    change_rate: float = 1 / 250   # regular sound changes per lineage per year
+    sporadic_rate: float = 2e-5    # sporadic changes per concept per lineage per year
+    min_syllables: int = 2
+    max_syllables: int = 3
+    p_final_consonant: float = 0.5
+
+    def __post_init__(self) -> None:
+        if self.change_rate < 0 or self.sporadic_rate < 0:
+            raise ValueError("rates must be >= 0")
+        if not 1 <= self.min_syllables <= self.max_syllables:
+            raise ValueError("need 1 <= min_syllables <= max_syllables")
+
+
+@dataclass(frozen=True)
+class SoundChange:
+    target: str
+    output: str
+    context: str
+
+    def pattern(self) -> re.Pattern:
+        x = re.escape(self.target)
+        return re.compile({
+            "any": x,
+            "intervocalic": f"(?<={_V}){x}(?={_V})",
+            "initial": f"^{x}",
+            "final": f"{x}$",
+            "before_front": f"{x}(?=[{FRONT}])",
+        }[self.context])
+
+    def apply(self, form: str) -> str:
+        out = self.pattern().sub(self.output, form)
+        return out if out else form  # never delete a whole word
+
+    def __str__(self) -> str:
+        ctx = {"any": "", "intervocalic": " / V_V", "initial": " / #_", "final": " / _#",
+               "before_front": " / _[e,i]"}[self.context]
+        return f"{self.target} > {self.output or '∅'}{ctx}"
+
+
+def random_protoform(p: PhonologyParams, rng: np.random.Generator) -> str:
+    n = int(rng.integers(p.min_syllables, p.max_syllables + 1))
+    s = "".join(CONSONANTS[rng.integers(len(CONSONANTS))] + VOWELS[rng.integers(len(VOWELS))]
+                for _ in range(n))
+    if rng.random() < p.p_final_consonant:
+        s += CONSONANTS[rng.integers(len(CONSONANTS))]
+    return s
+
+
+def draw_sound_change(forms: list[str], rng: np.random.Generator) -> Optional[SoundChange]:
+    """A rule whose target occurs in ``forms`` (None if there are no forms)."""
+    text = "".join(forms)
+    if not text:
+        return None
+    segs, counts = np.unique(list(text), return_counts=True)
+    for _ in range(20):  # retry until the rule matches at least one word
+        x = str(segs[rng.choice(len(segs), p=counts / counts.sum())])
+        y = OUTCOMES[x][rng.integers(len(OUTCOMES[x]))]
+        ctx = CONTEXTS[rng.integers(len(CONTEXTS))]
+        if y == "" and x in VOWELS:
+            continue
+        rule = SoundChange(x, y, ctx)
+        if any(rule.apply(f) != f for f in forms):
+            return rule
+    return None
+
+
+def sporadic_change(form: str, rng: np.random.Generator) -> str:
+    kind = rng.integers(3) if len(form) > 2 else rng.integers(2)
+    i = int(rng.integers(len(form)))
+    if kind == 0:  # substitution by a plausible outcome
+        outs = [o for o in OUTCOMES[form[i]] if o]
+        return form[:i] + outs[rng.integers(len(outs))] + form[i + 1:]
+    if kind == 1:  # insertion
+        seg = INVENTORY[rng.integers(len(INVENTORY))]
+        return form[:i] + seg + form[i:]
+    return form[:i] + form[i + 1:]  # deletion
+
+
+class LineagePhonology:
+    """Pre-drawn schedule of phonological events on one branch.
+
+    Events are (age, kind) with kind "rule" or "sporadic", ages descending
+    from the top of the branch. Drawing the schedule up front from a separate
+    RNG keeps the cognate process's random stream untouched.
+    """
+
+    def __init__(self, top_age: float, bottom_age: float, p: PhonologyParams, n_concepts: int,
+                 rng: np.random.Generator):
+        span = top_age - bottom_age
+        n_rule = rng.poisson(p.change_rate * span)
+        n_spor = rng.poisson(p.sporadic_rate * n_concepts * span)
+        ages = np.concatenate([top_age - rng.random(n_rule) * span,
+                               top_age - rng.random(n_spor) * span])
+        kinds = ["rule"] * n_rule + ["sporadic"] * n_spor
+        order = np.argsort(-ages)
+        self.events = [(float(ages[i]), kinds[i]) for i in order]
+        self.pos = 0
+        self.rules: list[tuple[float, str]] = []
+
+    def advance(self, to_age: float, forms: dict[int, str], rng: np.random.Generator) -> None:
+        """Apply every scheduled event with age >= ``to_age`` to ``forms`` in place."""
+        while self.pos < len(self.events) and self.events[self.pos][0] >= to_age:
+            age, kind = self.events[self.pos]
+            self.pos += 1
+            if not forms:
+                continue
+            keys = sorted(forms)
+            if kind == "rule":
+                rule = draw_sound_change([forms[k] for k in keys], rng)
+                if rule is None:
+                    continue
+                for k in keys:
+                    forms[k] = rule.apply(forms[k])
+                self.rules.append((age, str(rule)))
+            else:
+                k = keys[int(rng.integers(len(keys)))]
+                forms[k] = sporadic_change(forms[k], rng)

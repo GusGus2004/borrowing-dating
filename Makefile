@@ -2,7 +2,7 @@
 PY      := .venv/bin/python
 KAUFMAN := data/raw/kaufmanpmed/cldf/cldf-metadata.json
 
-.PHONY: all env data matrices sim test beast beast-smoke babelfix beast-debug-relaxed m1-strict m1-relaxed clean
+.PHONY: all env data matrices sim test beast beast-smoke babelfix beast-debug-relaxed m1-strict m1-relaxed m2 clean
 
 all: env data matrices sim test
 
@@ -62,6 +62,12 @@ m1-relaxed: babelfix beast-debug-relaxed
 	$(PY) scripts/m1_coverage.py --clock relaxed prepare --n 100
 	$(PY) scripts/m1_coverage.py --clock relaxed run --jobs 6
 	$(PY) scripts/m1_coverage.py --clock relaxed summarise
+
+# Milestone 2 bias curve (~1 h on 7 cores; needs no babelfix: strict clock).
+m2: | env
+	$(PY) scripts/m2_bias.py prepare
+	$(PY) scripts/m2_bias.py run --jobs 6
+	$(PY) scripts/m2_bias.py summarise
 
 clean:
 	rm -rf data/derived/* && touch data/derived/.gitkeep

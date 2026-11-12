@@ -6,17 +6,75 @@ The full project design is kept privately.
 
 ## Status
 
-**Phase 1: null-model simulator and data pipeline (no borrowing yet).**
-
-| Component | State |
+| Milestone | State |
 |---|---|
-| `sim/tree.py`: time-calibrated trees, Newick I/O, Yule simulation | done, tested |
-| `sim/sdollo.py`: stochastic Dollo cognate birth/loss, discrete/continuous gamma across concepts, uncorrelated lognormal relaxed clock | done, tested (analytic checks) |
-| `pipeline/cldf.py`: CLDF Wordlist export of simulations + ground truth; CLDF → cognate matrix (CSV/NEXUS) for simulated *and* real data | done, tested (pycldf validation, round trip) |
-| Mayan data (Lexibank `kaufmanpmed`) → cognate matrix | done |
-| BEAST2 pinned install + SDollo smoke test (`make beast-smoke`) | done: Babel's SDollo example runs to completion |
-| BEAST2 recovery of simulated ages / HPD coverage (milestone 1) | next |
-| Borrowing, phonology, pair HMM, Track B | not started (by design) |
+| 0. Environment, CLDF pipeline, Mayan data, BEAST2 | done |
+| 1. Simulator (no borrowing) + BEAST2 calibration | **strict clock: done** (100 replicates, below). Relaxed clock: `babelfix` written and passes the likelihood debug check; coverage study not yet run (`make m1-relaxed`) |
+| 2. Bias curve vs borrowing rate, two contact models | simulator done and tested; 270 BEAST2 fits running (`make m2`) |
+| 3. Phoneme strings + pair HMM, ROC | **done** (below) |
+| 4. Latent-donor correction | masking pipeline done; oracle vs detector refits queued. Latent-donor (level 2) model written but **does not beat level 1 yet** (below) |
+| 5. Mayan application | not started; needs a basic-vocabulary Mayan dataset (see Data) |
+
+## Results so far
+
+### Milestone 1: strict clock is well calibrated
+
+`make m1-strict`: 100 replicates with trees, root ages and loss rates drawn
+from `infer/beast/m1_strict_prior.json` (10 languages, 200 concepts), each
+fitted with the same prior in BEAST2.
+
+| Parameter | 95% HPD coverage (±2 s.e.) | min ESS | rank-uniformity KS p |
+|---|---|---|---|
+| root age | 0.94 ± 0.05 | 1313 | 0.19 |
+| tree length | 0.91 ± 0.06 | 1311 | 0.20 |
+| loss rate μ | 0.90 ± 0.06 | 1362 | 0.16 (χ² p = 0.03, not significant after correcting for 3 tests) |
+
+BEAST2's `-sampleFromPrior` marginals match the simulator's (KS p 0.25–0.65).
+Note that the root-age HPD is 94% as wide as its N(4000, 500) calibration
+prior: with the rate unknown, the data constrain relative ages, loss rate and
+tree length much more than the absolute root. The milestone 2 summary
+therefore also reports bias in μ and tree length.
+
+![](figures/m1_coverage_strict.png)
+
+### Milestone 3: form-level detection (pair HMM)
+
+`scripts/m3_roc.py`, 20 replicates per setting, about 10% of entries borrowed
+(κ = 0.5). The detector sees only leaf forms and cognate sets. Each language
+pair gets a pair-HMM mixture of "regular correspondences" (learned) vs "loan"
+(near-identity). Pair log-likelihood ratios are robustly z-scored within each
+language pair, which raised pair-level AUC from 0.63 to 0.74 by removing the
+pair's overall divergence. An entry's score is the mean over its cognate-set
+partners.
+
+* AUC 0.70–0.72 once regular sound change is at least 1 per 200 y per
+  lineage, and 0.65 at 1 per 400 y.
+* Power depends on the **separation** between recipient and donor (MRCA age
+  minus loan age): chance level below 500 y, about 0.60–0.68 at 500–1500 y,
+  and about 0.72 beyond. Loans between close relatives, or made soon after a
+  split, are invisible in the forms.
+* **Main limitation: form evidence is symmetric.** A loan makes recipient and
+  donor-clade forms look alike, and nothing in the pair says who borrowed. At
+  z > 1 the detector has precision about 0.42 and recall about 0.32 (κ = 1).
+
+![](figures/m3_roc.png)
+
+### Milestone 4: level 2 (negative so far)
+
+`hmm/latent.py` implements the planned latent-donor admixture: per entry,
+inherited or borrowed from language *d*; per-language Dirichlet borrowing
+profiles; EM. A tree-free "direction" cue was also tried (relatives closer
+than the donor should lack the borrowed set). On 10 test datasets it scores
+*lower* AUC than level 1 (about 0.58 vs 0.67). A loan usually comes from an
+ancestral lineage, so the whole donor clade looks loan-like, whereas a
+single-donor latent variable concentrates the evidence on one language. The
+next step is a donor variable over **lineages** (branches of an estimated
+tree) rather than languages.
+
+The correction study (`scripts/m4_correction.py`) refits the κ = 1 milestone 2
+replicates after masking (language, concept) cells as missing, using either
+the true loans (oracle: an upper bound on what any detector can gain) or the
+level-1 detector.
 
 ## Quick start
 
@@ -108,14 +166,14 @@ by `make`.
 
 ```
 env/          pinned Python lockfile; BEAST2 installer
-infer/beast/  BEAST2 XML (smoke/ = shortened Babel SDollo example)
+infer/        BEAST2 XML generation, runner, loan masking; beast/ = templates, prior specs, babelfix
 data/raw/     fetched CLDF datasets (git-ignored, pinned commits)
 data/derived/ cognate matrices, simulated datasets (git-ignored, rebuilt by make)
-sim/          forward simulator: tree.py, sdollo.py (borrowing.py, phonology.py to come)
+sim/          forward simulator: tree.py, sdollo.py, borrowing.py, phonology.py
 pipeline/     CLDF I/O shared by real and simulated data
 scripts/      CLI entry points used by the Makefile
 infer/cpp/    Track B (later)
-hmm/          pair HMM (milestone 3)
+hmm/          pair HMM (level 1) and latent-donor mixture (level 2)
 analysis/     bias curves, ROC, figures
 tests/
 figures/

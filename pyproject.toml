@@ -9,7 +9,7 @@ dependencies = ["numpy", "scipy", "pycldf", "matplotlib", "jinja2"]
 test = ["pytest"]
 
 [tool.setuptools]
-packages = ["sim", "pipeline", "infer", "analysis"]
+packages = ["sim", "pipeline", "infer", "analysis", "hmm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

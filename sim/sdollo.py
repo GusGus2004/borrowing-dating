@@ -79,6 +79,7 @@ class SDolloResult:
     leaf_names: list[str]
     presence: np.ndarray                 # (n_leaves, n_classes) bool
     extra: dict = field(default_factory=dict)
+    forms: Optional[np.ndarray] = None   # (n_leaves, n_classes) object: phoneme string or None
 
     # ------------------------------------------------------------------ views
     @property
@@ -100,6 +101,7 @@ class SDolloResult:
             leaf_names=self.leaf_names,
             presence=self.presence[:, keep],
             extra=dict(self.extra, n_unobserved_dropped=int((~keep).sum())),
+            forms=None if self.forms is None else self.forms[:, keep],
         )
 
     def concept_counts(self) -> np.ndarray:

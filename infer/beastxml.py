@@ -15,6 +15,8 @@ import numpy as np
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from pipeline.cldf import MISSING, CognateMatrix, read_cognate_matrix, write_simulation
+from sim.borrowing import BorrowingParams, borrowed_entries, simulate_with_borrowing
+from sim.phonology import PhonologyParams
 from sim.sdollo import SDolloParams, simulate
 from sim.tree import Tree, simulate_yule_given_root
 
@@ -65,8 +67,18 @@ def draw_truth(prior: dict, rng: np.random.Generator) -> dict:
     }
 
 
-def simulate_replicate(prior: dict, seed: int, outdir: Path | str) -> dict:
+def simulate_replicate(prior: dict, seed: int, outdir: Path | str,
+                       borrowing: dict | None = None, phonology: dict | None = None) -> dict:
     """Draw from the prior, simulate cognate data, write CLDF + truth + XML.
+
+    With ``borrowing`` (keyword arguments for :class:`BorrowingParams`, where
+    ``rate`` is replaced by ``rate_over_loss``, the borrowing rate as a multiple
+    of the drawn loss rate) the data come from the borrowing simulator and the
+    borrowed leaf entries are written to ``borrowings.csv``. The tree and
+    parameters depend only on ``seed``, not on ``borrowing``, so replicates with
+    the same seed share their truth across borrowing levels. ``phonology``
+    (keyword arguments for :class:`PhonologyParams`) adds phoneme strings
+    without changing the cognate data.
 
     Returns the truth record. Everything is reproducible from ``seed``.
     """
@@ -81,10 +93,24 @@ def simulate_replicate(prior: dict, seed: int, outdir: Path | str) -> dict:
         gamma_shape=None,
         clock_sd=truth["clock_sd"],
     )
-    res = simulate(truth["tree"], params, rng=np.random.default_rng(char_ss))
+    rows = None
+    if borrowing is None:
+        res = simulate(truth["tree"], params, rng=np.random.default_rng(char_ss))
+    else:
+        b = dict(borrowing)
+        bp = BorrowingParams(rate=b.pop("rate_over_loss") * mu, **b)
+        ph = PhonologyParams(**phonology) if phonology is not None else None
+        full = simulate_with_borrowing(truth["tree"], params, bp, rng=np.random.default_rng(char_ss),
+                                       phonology=ph)
+        res, rows = borrowed_entries(full)
     res.seed = seed
     res.extra["tree_length"] = truth["tree"].tree_length()
     md = write_simulation(res, outdir)
+    if rows is not None:
+        with open(outdir / "borrowings.csv", "w") as f:
+            f.write("Language_ID,Parameter_ID,Cognateset_ID\n")
+            for r in rows:
+                f.write(f"{r['language']},c{r['concept'] + 1:04d},cs{r['class_index'] + 1:06d}\n")
     cm = read_cognate_matrix(md, concept_level_missing=False)
     xml = render_xml(cm, prior, stem="beast")
     (outdir / "beast.xml").write_text(xml)
@@ -96,11 +122,11 @@ def simulate_replicate(prior: dict, seed: int, outdir: Path | str) -> dict:
 
 def render_xml(cm: CognateMatrix, prior: dict, stem: str,
                template: str = "sdollo.xml.j2", mcmc: dict | None = None) -> str:
-    if (cm.matrix == MISSING).any():
-        raise ValueError("this template expects no missing data")
     env = Environment(loader=FileSystemLoader(BEAST_DIR), undefined=StrictUndefined,
                       keep_trailing_newline=True)
-    seqs = [(lang, "".join(str(int(v)) for v in row)) for lang, row in zip(cm.languages, cm.matrix)]
+    # MISSING -> "?": Babel's SDollo likelihood marginalises over it (useAmbiguities)
+    seqs = [(lang, "".join("?" if v == MISSING else str(int(v)) for v in row))
+            for lang, row in zip(cm.languages, cm.matrix)]
     init = {
         "root_age": prior_mean(prior["root_age"]),
         "loss_rate": prior_mean(prior["loss_rate"]),

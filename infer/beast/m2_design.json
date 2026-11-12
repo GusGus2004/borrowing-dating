@@ -1,0 +1,12 @@
+{
+  "_comment": "Milestone 2 bias curve. Truth drawn from the milestone 1 strict prior (validated well-calibrated); data simulated with borrowing at rate kappa * mu per concept per lineage per year (replacement borrowing); inference with the same no-borrowing SDollo + strict clock + Yule XML. Replicate i uses seed seed0 + i in every cell, so all cells share trees and parameters.",
+  "prior": "m1_strict_prior.json",
+  "kappa": [0.0, 0.25, 0.5, 1.0, 2.0],
+  "contact": {
+    "uniform": {"contact": "uniform"},
+    "distance": {"contact": "distance", "distance_scale": 1000.0}
+  },
+  "mode": "replace",
+  "n_reps": 30,
+  "seed0": 5000
+}

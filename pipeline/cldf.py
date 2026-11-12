@@ -150,8 +150,8 @@ def write_simulation(result, outdir: Path | str, dataset_id: str = "sim") -> Pat
     """Write an SDollo simulation as a CLDF Wordlist plus ground truth.
 
     Only observable classes (present in at least one language) are written.
-    Forms are placeholders (``<concept>_<class>``) until phoneme strings are
-    simulated (milestone 3); the cognate structure is what matters here.
+    Forms are the simulated phoneme strings if the result has them, else
+    placeholders (``<concept>_<class>``).
 
     Returns the path to the metadata JSON.
     """
@@ -186,7 +186,7 @@ def write_simulation(result, outdir: Path | str, dataset_id: str = "sim") -> Pat
         for j in np.flatnonzero(obs.presence[i]):
             concept = concept_ids[obs.class_concept[j]]
             fid = f"{lang}-{cs_ids[j]}"
-            value = f"{concept}_{cs_ids[j]}"
+            value = obs.forms[i, j] if obs.forms is not None else f"{concept}_{cs_ids[j]}"
             forms.append({"ID": fid, "Language_ID": lang, "Parameter_ID": concept,
                           "Value": value, "Form": value})
             cognates.append({"ID": f"{fid}-cog", "Form_ID": fid, "Cognateset_ID": cs_ids[j]})
