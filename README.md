@@ -193,7 +193,6 @@ LingPy LexStat at threshold 0.75: 255 sets, 2.5% missing cells.
   stability in `sim/phonology.py`.
 
 **Kaufmanpmed checked and rejected for dating.** `kaufmanpmed` cannot be made into a
-
 basic-vocabulary dataset. None of its 5,932 glosses is linked to Concepticon,
 and its `Loan` column is empty. Matching the Swadesh-100 concepts to etymon
 glosses finds 22 concepts, only 14 of which are attested in at least 20 of
