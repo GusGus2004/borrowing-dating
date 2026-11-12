@@ -1,6 +1,7 @@
 # Everything reproducible from `make`. Seeds are fixed here and recorded in truth.json.
 PY      := .venv/bin/python
 KAUFMAN := data/raw/kaufmanpmed/cldf/cldf-metadata.json
+ASJP    := data/raw/asjp/cldf/cldf-metadata.json
 
 .PHONY: all env data matrices sim test beast beast-smoke babelfix beast-debug-relaxed m1-strict m1-relaxed m2 clean
 
@@ -22,11 +23,15 @@ beast-smoke:
 	cd infer/beast/smoke && $(BEAST) -overwrite -seed 1 testSDollo.xml > beast.out 2>&1 \
 	    && tail -3 beast.out
 
-data: $(KAUFMAN)
-$(KAUFMAN):
+data: $(KAUFMAN) $(ASJP)
+$(KAUFMAN) $(ASJP):
 	./scripts/fetch_data.sh
 
-matrices: data/derived/kaufmanpmed/matrix.nex
+matrices: data/derived/kaufmanpmed/matrix.nex data/derived/asjp_mayan/matrix.nex
+
+# Mayan ASJP core vocabulary, LexStat cognates (milestone 5 data)
+data/derived/asjp_mayan/matrix.nex: $(ASJP) pipeline/asjp.py pipeline/cldf.py scripts/build_asjp_mayan.py | env
+	$(PY) scripts/build_asjp_mayan.py
 data/derived/kaufmanpmed/matrix.nex: $(KAUFMAN) pipeline/cldf.py scripts/build_matrix.py | env
 	$(PY) scripts/build_matrix.py $(KAUFMAN) data/derived/kaufmanpmed --no-concept-missing
 

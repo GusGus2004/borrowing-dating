@@ -122,3 +122,13 @@ def test_upgma_clades_and_lineage_model():
     assert all(0 <= p <= 1 for p in f.p_borrowed.values())
     assert f.p_borrowed[("A", "3")] > f.p_borrowed[("A", "1")]
     assert f.p_borrowed[("B", "4")] == 0.0  # singleton: nothing to compare
+
+
+def test_segment_lists_and_custom_alphabet():
+    # IPA-like multi-character segments outside the simulator inventory
+    wl = {"A": {"1": ["tʃ", "a"], "2": ["k'", "i", "n"], "3": ["h", "a", "ʔ"]},
+          "B": {"1": ["tʃ", "e"], "2": ["q'", "i", "x"], "3": ["h", "a", "ʔ"]},
+          "C": {"1": ["ts", "a"], "2": ["k'", "i", "n"], "3": ["a", "ʔ"]}}
+    s = entry_scores(wl)
+    assert set(s) == {(l, k) for l in wl for k in wl[l]}
+    assert all(np.isfinite(v) for v in s.values())

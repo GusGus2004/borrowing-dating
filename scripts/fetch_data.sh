@@ -8,6 +8,7 @@ RAW="$ROOT/data/raw"
 # name  github-repo  commit
 DATASETS=(
   "kaufmanpmed lexibank/kaufmanpmed a774237b76081437389148a3dc007309679e38e2"
+  "asjp lexibank/asjp cf4bf0d13c95256b1b48f440d07c5c098500a770"   # v21.1
 )
 
 for entry in "${DATASETS[@]}"; do

@@ -13,7 +13,7 @@ The full project design is kept privately.
 | 2. Bias curve vs borrowing rate, two contact models | simulator done and tested; 270 BEAST2 fits running (`make m2`) |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below) |
 | 4. Latent-donor correction | masking pipeline done; oracle vs detector refits queued. Latent-donor (level 2) model written but **does not beat level 1 yet** (below) |
-| 5. Mayan application | not started; needs a basic-vocabulary Mayan dataset (see Data) |
+| 5. Mayan application | data built: ASJP core vocabulary, 31 languages, LexStat cognates (below). Dating needs calibrations: decision pending |
 
 ## Results so far
 
@@ -168,7 +168,32 @@ suitable for dating as it stands. Before milestone 5 we need to either
 informative, or (b) find a dedicated Mayan basic-vocabulary dataset (for example
 from the ASJP/Wichmann line or published Mayan phylogenetic studies). 
 
-**Checked (milestone 5 prerequisite):** `kaufmanpmed` cannot be made into a
+**Milestone 5 data: ASJP + automated cognates** (`make matrices`,
+`pipeline/asjp.py`). From `lexibank/asjp` v21.1 (pinned): the 109 Mayan
+doculects reduce to 31 languages (one per Glottolog languoid, ≥ 28 of the 40
+core concepts). Every major branch is present: Huastecan, Yucatecan,
+Cholan–Tzeltalan, Q'anjobalan, Mamean, K'iche'an, Mocho' and Chicomuceltec.
+The 15 forms ASJP flags as loans (Spanish) are removed. Cognates come from
+LingPy LexStat at threshold 0.75: 255 sets, 2.5% missing cells.
+
+* **Threshold calibration.** On simulated wordlists of the same shape
+  (31 × 40, root ≈ 4000 y), B-cubed F was 0.73 / 0.84 / 0.90 / **0.93** at
+  thresholds 0.45 / 0.55 / 0.65 / **0.75** (P 0.93, R 0.93 at 0.75). At
+  LingPy's usual 0.55, obvious Mayan cognates were split; for example,
+  reflexes of *\*ka'ib'* "two" fell into 4 sets. At 0.75 they form one.
+* **Known errors at 0.75**, from spot checks: *k'ak'al* (from "fire") is
+  merged into "sun"; *siwan* is merged with *tun* "stone"; *tunich* is split
+  from *tun*. Cognate-coding noise of this size should be propagated (e.g.
+  re-run at 0.65/0.75/0.85) and simulated before dates are interpreted.
+* **Level-1 detector on real data.** The highest-scoring entries are short,
+  pan-Mayan retentions (*uk'* "louse", *im* "breast", *ha'* "water"), not
+  loans. Identical forms in distant languages look loan-like to the model.
+  The simulator has no segment-specific stability, so it never produced this
+  failure. Next: concept-wise score normalisation and more realistic
+  stability in `sim/phonology.py`.
+
+**Kaufmanpmed checked and rejected for dating.** `kaufmanpmed` cannot be made into a
+
 basic-vocabulary dataset. None of its 5,932 glosses is linked to Concepticon,
 and its `Loan` column is empty. Matching the Swadesh-100 concepts to etymon
 glosses finds 22 concepts, only 14 of which are attested in at least 20 of

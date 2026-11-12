@@ -5,3 +5,4 @@ pycldf==2.1.1
 matplotlib==3.11.2
 pytest==9.2.0
 jinja2==3.1.6
+lingpy==2.6.14
