@@ -57,10 +57,20 @@ class PhonologyParams:
     min_syllables: int = 2
     max_syllables: int = 3
     p_final_consonant: float = 0.5
+    # Segments that sound change rarely targets (weight ``stable_weight``
+    # relative to 1 for the rest), family-wide. Real families have such
+    # segments, which leaves short roots made of them nearly unchanged
+    # everywhere (e.g. Mayan *ha'* "water", *uk'* "louse").
+    stable_segments: str = ""
+    stable_weight: float = 1.0
 
     def __post_init__(self) -> None:
         if self.change_rate < 0 or self.sporadic_rate < 0:
             raise ValueError("rates must be >= 0")
+        if not set(self.stable_segments) <= set(INVENTORY):
+            raise ValueError("stable_segments must be in INVENTORY")
+        if not 0 <= self.stable_weight <= 1:
+            raise ValueError("stable_weight must be in [0, 1]")
         if not 1 <= self.min_syllables <= self.max_syllables:
             raise ValueError("need 1 <= min_syllables <= max_syllables")
 
@@ -100,14 +110,23 @@ def random_protoform(p: PhonologyParams, rng: np.random.Generator) -> str:
     return s
 
 
-def draw_sound_change(forms: list[str], rng: np.random.Generator) -> Optional[SoundChange]:
-    """A rule whose target occurs in ``forms`` (None if there are no forms)."""
+def draw_sound_change(forms: list[str], rng: np.random.Generator,
+                      p: Optional[PhonologyParams] = None) -> Optional[SoundChange]:
+    """A rule whose target occurs in ``forms`` (None if there are no forms).
+
+    Targets are drawn by frequency, down-weighted for ``p.stable_segments``.
+    """
     text = "".join(forms)
     if not text:
         return None
     segs, counts = np.unique(list(text), return_counts=True)
+    w = counts.astype(float)
+    if p is not None and p.stable_segments:
+        w *= np.where(np.isin(segs, list(p.stable_segments)), p.stable_weight, 1.0)
+    if w.sum() == 0:
+        return None
     for _ in range(20):  # retry until the rule matches at least one word
-        x = str(segs[rng.choice(len(segs), p=counts / counts.sum())])
+        x = str(segs[rng.choice(len(segs), p=w / w.sum())])
         y = OUTCOMES[x][rng.integers(len(OUTCOMES[x]))]
         ctx = CONTEXTS[rng.integers(len(CONTEXTS))]
         if y == "" and x in VOWELS:
@@ -149,6 +168,7 @@ class LineagePhonology:
         order = np.argsort(-ages)
         self.events = [(float(ages[i]), kinds[i]) for i in order]
         self.pos = 0
+        self.p = p
         self.rules: list[tuple[float, str]] = []
 
     def advance(self, to_age: float, forms: dict[int, str], rng: np.random.Generator) -> None:
@@ -160,7 +180,7 @@ class LineagePhonology:
                 continue
             keys = sorted(forms)
             if kind == "rule":
-                rule = draw_sound_change([forms[k] for k in keys], rng)
+                rule = draw_sound_change([forms[k] for k in keys], rng, self.p)
                 if rule is None:
                     continue
                 for k in keys:

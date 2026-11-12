@@ -112,3 +112,15 @@ def test_params_validation():
         PhonologyParams(change_rate=-1)
     with pytest.raises(ValueError):
         PhonologyParams(min_syllables=3, max_syllables=2)
+
+
+def test_stable_segments_rarely_change():
+    from sim.phonology import draw_sound_change
+    rng = np.random.default_rng(0)
+    forms = ["hama", "kana", "pata", "tapa"]
+    p = PhonologyParams(stable_segments="hmnk" + "a", stable_weight=0.0)
+    targets = {draw_sound_change(forms, rng, p).target for _ in range(200)}
+    assert targets <= {"p", "t"}
+    # default (no stable segments) is unchanged behaviour: any segment can be targeted
+    targets = {draw_sound_change(forms, rng).target for _ in range(400)}
+    assert {"h", "a"} <= targets

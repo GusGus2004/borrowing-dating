@@ -189,8 +189,21 @@ LingPy LexStat at threshold 0.75: 255 sets, 2.5% missing cells.
   pan-Mayan retentions (*uk'* "louse", *im* "breast", *ha'* "water"), not
   loans. Identical forms in distant languages look loan-like to the model.
   The simulator has no segment-specific stability, so it never produced this
-  failure. Next: concept-wise score normalisation and more realistic
-  stability in `sim/phonology.py`.
+  failure. Follow-up tests (8 simulated replicates each, κ = 0.5):
+
+  | Simulated phonology | AUC |
+  |---|---|
+  | default (2–3 syllable roots) | 0.80 |
+  | + stable segments (`stable_segments`, weight 0.05) | 0.74 |
+  | Mayan-like CVC roots | 0.72 |
+  | CVC + stable segments | **0.67** |
+
+  So the milestone 3 AUCs are optimistic for a family like Mayan.
+  Concept-wise normalisation (subtracting each concept's median score)
+  *lowered* AUC (0.80 → 0.65), and normalising pair LLRs by word length had no
+  effect; both were dropped. Separating shared retentions from loans will
+  probably need more than form similarity, such as a model of segment-specific
+  stability.
 
 **Milestone 5 calibrations (draft, to be reviewed before any date is
 reported)** are in `infer/beast/m5_mayan_prior.json`. Every point carries
