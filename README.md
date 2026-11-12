@@ -13,7 +13,7 @@ The full project design is kept privately.
 | 2. Bias curve vs borrowing rate, two contact models | simulator done and tested; 270 BEAST2 fits running (`make m2`) |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below) |
 | 4. Latent-donor correction | masking pipeline done; oracle vs detector refits queued. Latent-donor (level 2) model written but **does not beat level 1 yet** (below) |
-| 5. Mayan application | data built: ASJP core vocabulary, 31 languages, LexStat cognates (below). Dating needs calibrations: decision pending |
+| 5. Mayan application | data built (ASJP core vocabulary, 31 languages, LexStat cognates). Draft calibrations in `infer/beast/m5_mayan_prior.json` **awaiting review**; 5 BEAST2 variants queued (`scripts/m5_mayan.py`) |
 
 ## Results so far
 
@@ -191,6 +191,24 @@ LingPy LexStat at threshold 0.75: 255 sets, 2.5% missing cells.
   The simulator has no segment-specific stability, so it never produced this
   failure. Next: concept-wise score normalisation and more realistic
   stability in `sim/phonology.py`.
+
+**Milestone 5 calibrations (draft, to be reviewed before any date is
+reported)** are in `infer/beast/m5_mayan_prior.json`. Every point carries
+its source and status. Glottochronological dates, including Kaufman's
+c. 2200 BC for Proto-Mayan, are deliberately excluded: using them as
+calibrations would make the test circular.
+
+| Node | Prior (years before AD 2000) | Basis |
+|---|---|---|
+| root (Proto-Mayan) | Uniform(1500, 9000) | spans all published estimates (c. 6600 BC to c. 209 BC) |
+| Yucatecan crown (monophyletic) | Normal(1050, 200) | Proto-Yucatecan c. AD 950 (Hofling 2018) |
+| Huastecan crown (monophyletic) | Uniform(480, 1100) | Chicomuceltec–Huastec split Postclassic (Kaufman 1980; Kaufman & Justeson 2008; Robertson & Houston 2015) |
+| *sensitivity only:* Cholan crown | Uniform(1750, 4000) | Classic Ch'olti'an in inscriptions from c. AD 250 (Houston, Robertson & Stuart 2000). **Contested**: Mora-Marín argues Cholan diversification is Postclassic |
+
+The loss-rate prior, LogNormal(−9, 1) with mean about 2e-4 per year, also
+carries absolute-time information and needs the same review. Variants:
+strict and relaxed clocks; + Cholan calibration; cognate thresholds 0.65 and
+0.85.
 
 **Kaufmanpmed checked and rejected for dating.** `kaufmanpmed` cannot be made into a
 basic-vocabulary dataset. None of its 5,932 glosses is linked to Concepticon,

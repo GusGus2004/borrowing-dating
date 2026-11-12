@@ -51,7 +51,9 @@ def prior_mean(spec: dict) -> float:
     if d in ("normal", "exponential"):
         return float(spec["mean"])
     if d == "lognormal":
-        return float(np.exp(spec["meanlog"] + spec["sdlog"] ** 2 / 2))
+        return float(spec.get("offset", 0.0) + np.exp(spec["meanlog"] + spec["sdlog"] ** 2 / 2))
+    if d == "uniform":
+        return 0.5 * (spec["lower"] + spec["upper"])
     raise ValueError(d)
 
 
@@ -127,14 +129,24 @@ def render_xml(cm: CognateMatrix, prior: dict, stem: str,
     # MISSING -> "?": Babel's SDollo likelihood marginalises over it (useAmbiguities)
     seqs = [(lang, "".join("?" if v == MISSING else str(int(v)) for v in row))
             for lang, row in zip(cm.languages, cm.matrix)]
+    yule_est = isinstance(prior["yule_birth_rate"], dict)
+    cals = prior.get("calibrations", [])
+    langs = set(cm.languages)
+    for c in cals:
+        missing = set(c["taxa"]) - langs
+        if missing:
+            raise ValueError(f"calibration {c['name']}: unknown taxa {sorted(missing)}")
+    root0 = prior_mean(prior["root_age"])
+    cal_max = max((prior_mean(c["dist"]) for c in cals), default=0.0)
     init = {
-        "root_age": prior_mean(prior["root_age"]),
+        "root_age": max(root0, 1.5 * cal_max),
+        "yule_birth_rate": prior_mean(prior["yule_birth_rate"]) if yule_est else None,
         "loss_rate": prior_mean(prior["loss_rate"]),
         "clock_sd": prior_mean(prior["clock_sd"]) if is_relaxed(prior) else 0.0,
     }
     return env.get_template(template).render(
         sequences=seqs, prior=prior, mcmc=mcmc or prior["mcmc"], init=init, stem=stem,
-        relaxed=is_relaxed(prior))
+        relaxed=is_relaxed(prior), yule_estimated=yule_est, calibrations=cals)
 
 
 def true_tree(rep_dir: Path | str) -> Tree:

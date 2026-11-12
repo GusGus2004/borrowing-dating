@@ -5,6 +5,12 @@
   Yule tree prior conditioned on the root, root-age calibration.
   Generated from infer/beast/sdollo.xml.j2. Do not edit by hand.
 -->
+{%- macro distr(d) -%}
+{%- if d.dist == "normal" -%}<distr spec="Normal" mean="{{ d.mean }}" sigma="{{ d.sd }}"/>
+{%- elif d.dist == "uniform" -%}<distr spec="beast.base.inference.distribution.Uniform" lower="{{ d.lower }}" upper="{{ d.upper }}"/>
+{%- elif d.dist == "lognormal" -%}<distr spec="LogNormalDistributionModel" M="{{ d.meanlog }}" S="{{ d.sdlog }}" meanInRealSpace="false"{% if d.offset is defined %} offset="{{ d.offset }}"{% endif %}/>
+{%- endif -%}
+{%- endmacro %}
 <beast version="2.7" namespace="beast.base.inference:beast.base.inference.parameter:beast.base.evolution.alignment:beast.base.evolution.tree:beast.base.evolution.sitemodel:beast.base.evolution.branchratemodel:beast.base.evolution.operator:beast.base.inference.operator:beast.base.inference.distribution">
 
 <data id="data" dataType="integer" name="alignment">
@@ -19,6 +25,9 @@
             <taxonset id="taxa" spec="TaxonSet"><alignment idref="data"/></taxonset>
         </tree>
         <parameter id="deathRate" lower="0.0" name="stateNode">{{ init.loss_rate }}</parameter>
+{%- if yule_estimated %}
+        <parameter id="yuleBirthRate" lower="0.0" name="stateNode">{{ init.yule_birth_rate }}</parameter>
+{%- endif %}
 {%- if relaxed %}
         <parameter id="ucldStdev" lower="0.0" name="stateNode">{{ init.clock_sd }}</parameter>
         <parameter id="rateQuantiles" lower="0.0" upper="1.0" name="stateNode">0.5</parameter>
@@ -26,6 +35,9 @@
     </state>
 
     <init id="RandomTree" spec="beast.base.evolution.tree.coalescent.RandomTree" estimate="false" initial="@Tree" taxa="@data" rootHeight="{{ init.root_age }}">
+{%- for c in calibrations if c.monophyletic %}
+        <constraint idref="cal_{{ c.name }}"/>
+{%- endfor %}
         <populationModel spec="beast.base.evolution.tree.coalescent.ConstantPopulation">
             <parameter name="popSize">{{ init.root_age / 2 }}</parameter>
         </populationModel>
@@ -39,11 +51,30 @@
                     <taxon id="{{ taxon }}" spec="Taxon"/>
 {%- endfor %}
                 </taxonset>
-                <distr spec="Normal" mean="{{ prior.root_age.mean }}" sigma="{{ prior.root_age.sd }}"/>
+                {{ distr(prior.root_age) }}
             </distribution>
+{%- for c in calibrations %}
+            <!-- {{ c.name }}: {{ c.source | e }} -->
+            <distribution id="cal_{{ c.name }}" spec="MRCAPrior" tree="@Tree" monophyletic="{{ 'true' if c.monophyletic else 'false' }}">
+                <taxonset id="taxa_{{ c.name }}" spec="TaxonSet">
+{%- for t in c.taxa %}
+                    <taxon idref="{{ t }}"/>
+{%- endfor %}
+                </taxonset>
+                {{ distr(c.dist) }}
+            </distribution>
+{%- endfor %}
             <distribution id="YulePrior" spec="beast.base.evolution.speciation.YuleModel" tree="@Tree" conditionalOnRoot="true">
+{%- if yule_estimated %}
+                <birthDiffRate idref="yuleBirthRate"/>
+            </distribution>
+            <distribution id="yuleBirthRatePrior" spec="Prior" x="@yuleBirthRate">
+                {{ distr(prior.yule_birth_rate) }}
+            </distribution>
+{%- else %}
                 <parameter name="birthDiffRate" estimate="false">{{ prior.yule_birth_rate }}</parameter>
             </distribution>
+{%- endif %}
             <distribution id="deathRatePrior" spec="Prior" x="@deathRate">
                 <distr spec="LogNormalDistributionModel" M="{{ prior.loss_rate.meanlog }}" S="{{ prior.loss_rate.sdlog }}" meanInRealSpace="false"/>
             </distribution>
@@ -95,6 +126,9 @@
     <operator spec="Exchange" isNarrow="false" tree="@Tree" weight="3.0"/>
     <operator spec="WilsonBalding" tree="@Tree" weight="3.0"/>
     <operator spec="ScaleOperator" parameter="@deathRate" scaleFactor="0.75" weight="5.0"/>
+{%- if yule_estimated %}
+    <operator spec="ScaleOperator" parameter="@yuleBirthRate" scaleFactor="0.75" weight="3.0"/>
+{%- endif %}
 {%- if relaxed %}
     <operator spec="ScaleOperator" parameter="@ucldStdev" scaleFactor="0.75" weight="5.0"/>
 {%- endif %}
@@ -113,6 +147,12 @@
         <log idref="prior"/>
         <log spec="TreeStatLogger" tree="@Tree"/>
         <log idref="deathRate"/>
+{%- if yule_estimated %}
+        <log idref="yuleBirthRate"/>
+{%- endif %}
+{%- for c in calibrations %}
+        <log idref="cal_{{ c.name }}"/>
+{%- endfor %}
 {%- if relaxed %}
         <log idref="ucldStdev"/>
         <log id="rateStat" spec="beast.base.evolution.RateStatistic" branchratemodel="@relaxedClock" tree="@Tree"/>
