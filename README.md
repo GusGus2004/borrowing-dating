@@ -166,9 +166,23 @@ cognate set means "not recorded", not "lost". It is built here with
 suitable for dating as it stands. Before milestone 5 we need to either
 (a) map a basic-vocabulary subset onto Concepticon and treat absence there as
 informative, or (b) find a dedicated Mayan basic-vocabulary dataset (for example
-from the ASJP/Wichmann line or published Mayan phylogenetic studies). The
-dataset's `Loan` column will be useful later as partial ground truth for
-borrowing.
+from the ASJP/Wichmann line or published Mayan phylogenetic studies). 
+
+**Checked (milestone 5 prerequisite):** `kaufmanpmed` cannot be made into a
+basic-vocabulary dataset. None of its 5,932 glosses is linked to Concepticon,
+and its `Loan` column is empty. Matching the Swadesh-100 concepts to etymon
+glosses finds 22 concepts, only 14 of which are attested in at least 20 of
+the 104 modern varieties. Searches of the Lexibank and CLDF-datasets
+organisations and the literature found no cognate-coded Mayan Swadesh
+dataset. The realistic options:
+
+1. **ASJP** (`lexibank/asjp`, 40-item basic lists for nearly every Mayan
+   variety) with **automated cognate detection** (LexStat), as in
+   Rama & Wichmann. Fully reproducible. Cognate errors become an extra noise
+   source, which the simulator could model.
+2. Request the cognate-coded Swadesh data behind published Mayan
+   phylogenies (e.g. Atkinson 2006) from the authors.
+3. Expert cognate coding, which is out of scope.
 
 Raw data under `data/raw/` is fetched by `scripts/fetch_data.sh`, made
 read-only, and never edited. Everything under `data/derived/` is regenerated
