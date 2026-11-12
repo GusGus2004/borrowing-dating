@@ -61,15 +61,27 @@ partners.
 
 ### Milestone 4: level 2 (negative so far)
 
-`hmm/latent.py` implements the planned latent-donor admixture: per entry,
-inherited or borrowed from language *d*; per-language Dirichlet borrowing
-profiles; EM. A tree-free "direction" cue was also tried (relatives closer
-than the donor should lack the borrowed set). On 10 test datasets it scores
-*lower* AUC than level 1 (about 0.58 vs 0.67). A loan usually comes from an
-ancestral lineage, so the whole donor clade looks loan-like, whereas a
-single-donor latent variable concentrates the evidence on one language. The
-next step is a donor variable over **lineages** (branches of an estimated
-tree) rather than languages.
+Two latent-donor models are in `hmm/latent.py`, both fitted by EM. Mean AUC
+on 10 test datasets (κ = 1, 1 sound change / 100 y):
+
+| Model | uniform | distance |
+|---|---|---|
+| level 1 (mean pair score) | **0.66** | **0.70** |
+| donor = a language, per-language Dirichlet profiles (`fit_latent`) | 0.57 | 0.61 |
+| donor = a lineage (clade of a UPGMA tree from cognate sharing; `fit_latent_lineage`) | 0.63 | 0.68 |
+| lineage + sister-clade "direction" cue | 0.54 | 0.62 |
+
+Treating the donor as a lineage removes most of the loss from the
+single-language version, since a loan from an ancestral lineage makes the
+whole donor clade look alike. It still does not beat the simple mean.
+
+The direction cue rested on a wrong assumption. The idea was that a
+recipient's close relatives should lack a borrowed set. In simulation they
+lack it as often as for inherited sets (uniform: 0.35 vs 0.37), or *less*
+often (distance contact: 0.14 vs 0.30). Most loans happen on ancestral
+branches, so the sister clade inherits the loan too, or the sister clade is
+the donor. Form-level evidence therefore remains the binding constraint, and
+the correction below uses level 1.
 
 The correction study (`scripts/m4_correction.py`) refits the κ = 1 milestone 2
 replicates after masking (language, concept) cells as missing, using either

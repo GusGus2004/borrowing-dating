@@ -104,3 +104,21 @@ def test_detection_power_on_simulated_loans():
     # ~0.75 here; form evidence cannot say which side of a loan relation borrowed,
     # which caps entry-level AUC (see README, milestone 3)
     assert auc > 0.7, auc
+
+
+def test_upgma_clades_and_lineage_model():
+    from hmm.latent import fit_latent_lineage, upgma_clades
+    entries = {"A": {"1", "2", "3"}, "B": {"1", "2", "4"}, "C": {"5", "6", "3"}, "D": {"5", "6", "7"}}
+    clades, sister = upgma_clades(entries)
+    assert frozenset({"A", "B"}) in clades and frozenset({"C", "D"}) in clades
+    assert sister["A"] == frozenset({"B"}) and sister["C"] == frozenset({"D"})
+    # set 3 is shared across the (A,B) | (C,D) split with a loan-like score
+    pair = {(l, k): {} for l, ks in entries.items() for k in ks}
+    for a, b, k, v in [("A", "B", "1", 0.1), ("A", "B", "2", -0.2), ("C", "D", "5", 0.0),
+                       ("C", "D", "6", 0.3), ("A", "C", "3", 4.0)]:
+        pair[(a, k)][b] = v; pair[(b, k)][a] = v
+    concept_of = {k: f"c{k}" for k in "1234567"}
+    f = fit_latent_lineage(pair, concept_of)
+    assert all(0 <= p <= 1 for p in f.p_borrowed.values())
+    assert f.p_borrowed[("A", "3")] > f.p_borrowed[("A", "1")]
+    assert f.p_borrowed[("B", "4")] == 0.0  # singleton: nothing to compare
