@@ -256,6 +256,37 @@ def simulate_yule(n_tips: int, root_age: float, rng: np.random.Generator,
     return Tree(root)
 
 
+def simulate_yule_given_root(n_tips: int, root_age: float, birth_rate: float,
+                             rng: np.random.Generator, tip_prefix: str = "L") -> Tree:
+    """Draw a tree from the Yule prior *conditioned on the root age*.
+
+    This is exactly the density BEAST2's ``YuleModel`` uses with
+    ``conditionalOnRoot="true"`` (rho = 1, a = 0): given root age T, the
+    n - 2 non-root internal node ages are iid Exp(birth_rate) truncated to
+    (0, T), and the ranked labelled topology is uniform (built here by
+    merging uniformly random pairs of lineages, youngest node first).
+    """
+    if n_tips < 2:
+        raise ValueError("need at least two tips")
+    if root_age <= 0 or birth_rate <= 0:
+        raise ValueError("root_age and birth_rate must be positive")
+    # Inverse-CDF sampling from Exp(r) truncated to (0, T)
+    u = rng.random(n_tips - 2)
+    ages = -np.log1p(-u * (1.0 - np.exp(-birth_rate * root_age))) / birth_rate
+    ages = np.sort(ages)
+    lineages = [Node(name=f"{tip_prefix}{i + 1}", age=0.0) for i in range(n_tips)]
+    for age in list(ages) + [root_age]:
+        i, j = sorted(rng.choice(len(lineages), size=2, replace=False))
+        parent = Node(age=float(age))
+        b = lineages.pop(j)
+        a = lineages.pop(i)
+        parent.add_child(a)
+        parent.add_child(b)
+        lineages.append(parent)
+    (root,) = lineages
+    return Tree(root)
+
+
 # ---------------------------------------------------------------------- helpers
 
 

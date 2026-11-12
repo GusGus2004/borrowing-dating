@@ -1,0 +1,27 @@
+{
+  "_comment": "Milestone 1 well-calibrated simulation study. Single source of truth: the simulator draws every quantity from these distributions and the BEAST2 XML uses the same distributions as priors. Time unit: years. Relaxed clock: requires the babelfix observation process (see babelfix/README.md).",
+  "n_tips": 10,
+  "n_concepts": 200,
+  "classes_per_concept": 1.0,
+  "root_age": {
+    "dist": "normal",
+    "mean": 4000.0,
+    "sd": 500.0
+  },
+  "yule_birth_rate": 0.0006,
+  "loss_rate": {
+    "dist": "lognormal",
+    "meanlog": -8.517193191416238,
+    "sdlog": 0.5
+  },
+  "clock_sd": {
+    "dist": "exponential",
+    "mean": 0.3
+  },
+  "mcmc": {
+    "chain_length": 2000000,
+    "log_every": 1000,
+    "tree_log_every": 10000,
+    "burnin_frac": 0.1
+  }
+}

@@ -3,13 +3,13 @@ name = "borrowing-dating"
 version = "0.1.0"
 description = "Borrowing-aware Bayesian dating of language families"
 requires-python = ">=3.11"
-dependencies = ["numpy", "scipy", "pycldf", "matplotlib"]
+dependencies = ["numpy", "scipy", "pycldf", "matplotlib", "jinja2"]
 
 [project.optional-dependencies]
 test = ["pytest"]
 
 [tool.setuptools]
-packages = ["sim", "pipeline"]
+packages = ["sim", "pipeline", "infer", "analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

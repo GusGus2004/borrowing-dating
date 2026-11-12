@@ -2,7 +2,7 @@
 PY      := .venv/bin/python
 KAUFMAN := data/raw/kaufmanpmed/cldf/cldf-metadata.json
 
-.PHONY: all env data matrices sim test beast beast-smoke clean
+.PHONY: all env data matrices sim test beast beast-smoke babelfix beast-debug-relaxed m1-strict m1-relaxed clean
 
 all: env data matrices sim test
 
@@ -39,6 +39,29 @@ data/derived/sim/example/Wordlist-metadata.json: sim/*.py pipeline/cldf.py scrip
 
 test: | env
 	$(PY) -m pytest -q
+
+babelfix:
+	./infer/beast/babelfix/build.sh
+
+# Likelihood-consistency check (BEAST recomputes from scratch every step) on a relaxed-clock replicate.
+beast-debug-relaxed: | env
+	$(PY) scripts/m1_coverage.py --clock relaxed prepare --n 1
+	cd data/derived/m1_relaxed/rep_000 && sed 's/chainLength="[0-9]*"/chainLength="20000"/; s/fileName="beast\./fileName="debug./' beast.xml > debug.xml \
+	    && $(CURDIR)/env/beast2/jre/bin/java -Dbeast.debug=true -Xss256m -cp $(CURDIR)/env/beast2/lib/launcher.jar \
+	       beast.pkgmgmt.launcher.BeastLauncher -packagedir $(CURDIR)/env/beast2-packages -overwrite -seed 1 debug.xml
+
+# Milestone 1 coverage studies (~25 min strict on 6 cores).
+m1-strict: | env
+	$(PY) scripts/m1_coverage.py --clock strict prior-check
+	$(PY) scripts/m1_coverage.py --clock strict prepare --n 100
+	$(PY) scripts/m1_coverage.py --clock strict run --jobs 6
+	$(PY) scripts/m1_coverage.py --clock strict summarise
+
+m1-relaxed: babelfix beast-debug-relaxed
+	$(PY) scripts/m1_coverage.py --clock relaxed prior-check
+	$(PY) scripts/m1_coverage.py --clock relaxed prepare --n 100
+	$(PY) scripts/m1_coverage.py --clock relaxed run --jobs 6
+	$(PY) scripts/m1_coverage.py --clock relaxed summarise
 
 clean:
 	rm -rf data/derived/* && touch data/derived/.gitkeep

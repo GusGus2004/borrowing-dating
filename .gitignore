@@ -15,3 +15,4 @@ env/beast2-packages/
 *.trees
 *.xml.state
 beast.out
+env/jdk/

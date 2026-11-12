@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  SDollo (Alekseyenko-Lee-Suchard / Babel ALSTreeLikelihood, gain rate integrated out),
+  uncorrelated lognormal relaxed clock (continuous quantile parameterisation, mean 1),
+  Yule tree prior conditioned on the root, root-age calibration.
+  Generated from infer/beast/sdollo.xml.j2. Do not edit by hand.
+-->
+<beast version="2.7" namespace="beast.base.inference:beast.base.inference.parameter:beast.base.evolution.alignment:beast.base.evolution.tree:beast.base.evolution.sitemodel:beast.base.evolution.branchratemodel:beast.base.evolution.operator:beast.base.inference.operator:beast.base.inference.distribution">
+
+<data id="data" dataType="integer" name="alignment">
+{%- for taxon, seq in sequences %}
+    <sequence id="seq_{{ taxon }}" taxon="{{ taxon }}" totalcount="2" value="{{ seq }}"/>
+{%- endfor %}
+</data>
+
+<run id="mcmc" spec="MCMC" chainLength="{{ mcmc.chain_length }}" storeEvery="{{ mcmc.log_every * 10 }}">
+    <state id="state">
+        <tree id="Tree" name="stateNode">
+            <taxonset id="taxa" spec="TaxonSet"><alignment idref="data"/></taxonset>
+        </tree>
+        <parameter id="deathRate" lower="0.0" name="stateNode">{{ init.loss_rate }}</parameter>
+{%- if relaxed %}
+        <parameter id="ucldStdev" lower="0.0" name="stateNode">{{ init.clock_sd }}</parameter>
+        <parameter id="rateQuantiles" lower="0.0" upper="1.0" name="stateNode">0.5</parameter>
+{%- endif %}
+    </state>
+
+    <init id="RandomTree" spec="beast.base.evolution.tree.coalescent.RandomTree" estimate="false" initial="@Tree" taxa="@data" rootHeight="{{ init.root_age }}">
+        <populationModel spec="beast.base.evolution.tree.coalescent.ConstantPopulation">
+            <parameter name="popSize">{{ init.root_age / 2 }}</parameter>
+        </populationModel>
+    </init>
+
+    <distribution id="posterior" spec="CompoundDistribution">
+        <distribution id="prior" spec="CompoundDistribution">
+            <distribution id="rootCalibration" spec="MRCAPrior" tree="@Tree" monophyletic="false">
+                <taxonset id="rootTaxa" spec="TaxonSet">
+{%- for taxon, seq in sequences %}
+                    <taxon id="{{ taxon }}" spec="Taxon"/>
+{%- endfor %}
+                </taxonset>
+                <distr spec="Normal" mean="{{ prior.root_age.mean }}" sigma="{{ prior.root_age.sd }}"/>
+            </distribution>
+            <distribution id="YulePrior" spec="beast.base.evolution.speciation.YuleModel" tree="@Tree" conditionalOnRoot="true">
+                <parameter name="birthDiffRate" estimate="false">{{ prior.yule_birth_rate }}</parameter>
+            </distribution>
+            <distribution id="deathRatePrior" spec="Prior" x="@deathRate">
+                <distr spec="LogNormalDistributionModel" M="{{ prior.loss_rate.meanlog }}" S="{{ prior.loss_rate.sdlog }}" meanInRealSpace="false"/>
+            </distribution>
+{%- if relaxed %}
+            <distribution id="ucldStdevPrior" spec="Prior" x="@ucldStdev">
+                <distr spec="Exponential" mean="{{ prior.clock_sd.mean }}"/>
+            </distribution>
+{%- endif %}
+        </distribution>
+        <distribution id="likelihood" spec="CompoundDistribution">
+            <distribution id="treeLikelihood" spec="babel.evolution.likelihood.ALSTreeLikelihood" tree="@Tree" useAmbiguities="true">
+                <!-- Relaxed clock needs babelfix: stock Babel 0.4.2 ignores/caches branch rates in the observation process (infer/beast/babelfix/README.md) -->
+                <observationprocess id="obsProcess" spec="{% if relaxed %}babelfix.AnyTipObservationProcessRC{% else %}babel.evolution.likelihood.AnyTipObservationProcess{% endif %}" integrateGainRate="true" mu="@deathRate" tree="@Tree"{% if relaxed %} branchRateModel="@relaxedClock"{% endif %}>
+                    <data id="sdolloData" spec="FilteredAlignment" data="@data" filter="-">
+                        <userDataType spec="babel.evolution.datatype.MutationDeathType" extantCode="1"/>
+                    </data>
+                    <siteModel id="siteModel" spec="SiteModel" gammaCategoryCount="1">
+                        <parameter name="mutationRate" estimate="false">1.0</parameter>
+                        <substModel id="SDollo" spec="beast.base.evolution.substitutionmodel.MutationDeathModel" deathprob="@deathRate">
+                            <frequencies spec="beast.base.evolution.substitutionmodel.Frequencies">
+                                <parameter name="frequencies" dimension="2">1.0 0.0</parameter>
+                            </frequencies>
+                        </substModel>
+                    </siteModel>
+                </observationprocess>
+                <data idref="sdolloData"/>
+                <siteModel idref="siteModel"/>
+{%- if relaxed %}
+                <branchRateModel id="relaxedClock" spec="UCRelaxedClockModel" rateQuantiles="@rateQuantiles" numberOfDiscreteRates="-1" tree="@Tree">
+                    <distr spec="LogNormalDistributionModel" S="@ucldStdev" meanInRealSpace="true">
+                        <parameter name="M" estimate="false">1.0</parameter>
+                    </distr>
+                    <parameter name="clock.rate" estimate="false">1.0</parameter>
+                </branchRateModel>
+{%- else %}
+                <branchRateModel id="strictClock" spec="StrictClockModel">
+                    <parameter name="clock.rate" estimate="false">1.0</parameter>
+                </branchRateModel>
+{%- endif %}
+            </distribution>
+        </distribution>
+    </distribution>
+
+    <operator spec="ScaleOperator" scaleFactor="0.75" tree="@Tree" weight="3.0"/>
+    <operator spec="ScaleOperator" scaleFactor="0.75" rootOnly="true" tree="@Tree" weight="3.0"/>
+    <operator spec="Uniform" tree="@Tree" weight="30.0"/>
+    <operator spec="SubtreeSlide" tree="@Tree" weight="15.0"/>
+    <operator spec="Exchange" tree="@Tree" weight="15.0"/>
+    <operator spec="Exchange" isNarrow="false" tree="@Tree" weight="3.0"/>
+    <operator spec="WilsonBalding" tree="@Tree" weight="3.0"/>
+    <operator spec="ScaleOperator" parameter="@deathRate" scaleFactor="0.75" weight="5.0"/>
+{%- if relaxed %}
+    <operator spec="ScaleOperator" parameter="@ucldStdev" scaleFactor="0.75" weight="5.0"/>
+{%- endif %}
+    <operator spec="UpDownOperator" scaleFactor="0.75" weight="5.0">
+        <up idref="Tree"/>
+        <down idref="deathRate"/>
+    </operator>
+{%- if relaxed %}
+    <operator spec="UniformOperator" parameter="@rateQuantiles" weight="10.0"/>
+    <operator spec="RealRandomWalkOperator" parameter="@rateQuantiles" windowSize="0.1" weight="10.0"/>
+{%- endif %}
+
+    <logger id="tracelog" fileName="{{ stem }}.log" logEvery="{{ mcmc.log_every }}" sort="smart">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+        <log spec="TreeStatLogger" tree="@Tree"/>
+        <log idref="deathRate"/>
+{%- if relaxed %}
+        <log idref="ucldStdev"/>
+        <log id="rateStat" spec="beast.base.evolution.RateStatistic" branchratemodel="@relaxedClock" tree="@Tree"/>
+{%- endif %}
+    </logger>
+    <logger id="treelog" fileName="{{ stem }}.trees" logEvery="{{ mcmc.tree_log_every }}" mode="tree">
+        <log spec="beast.base.evolution.TreeWithMetaDataLogger" tree="@Tree"/>
+    </logger>
+    <logger id="screenlog" logEvery="{{ mcmc.log_every * 100 }}">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+    </logger>
+</run>
+</beast>

@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
+from scipy import stats
 
-from sim.tree import Tree, simulate_yule
+from sim.tree import Tree, simulate_yule, simulate_yule_given_root
 
 
 def test_newick_roundtrip_preserves_ages():
@@ -64,3 +65,44 @@ def test_yule_reproducible():
     a = simulate_yule(10, 1.0, np.random.default_rng(7)).to_newick()
     b = simulate_yule(10, 1.0, np.random.default_rng(7)).to_newick()
     assert a == b
+
+
+# ---------------------------------------------------------------------- Yule | root
+
+
+def test_yule_given_root_structure():
+    t = simulate_yule_given_root(10, 4000.0, 6e-4, np.random.default_rng(0))
+    assert len(t.leaves()) == 10 and len(t.internal_nodes()) == 9
+    assert t.root_age == 4000.0
+    assert all(b.branch_length > 0 for b in t.branches())
+
+
+def test_yule_given_root_node_ages_are_truncated_exponential():
+    r, T, n = 6e-4, 4000.0, 8
+    rng = np.random.default_rng(1)
+    ages = np.concatenate([
+        [nd.age for nd in simulate_yule_given_root(n, T, r, rng).internal_nodes() if not nd.is_root]
+        for _ in range(2000)
+    ])
+    trunc = stats.truncexpon(b=r * T, scale=1 / r)
+    assert stats.kstest(ages, trunc.cdf).pvalue > 1e-3
+
+
+def test_yule_given_root_topology_matches_yule():
+    # Under Yule, P(root split of 4 tips is 2|2) = 1/3, 1|3 = 2/3.
+    rng = np.random.default_rng(2)
+    sizes = []
+    for _ in range(6000):
+        t = simulate_yule_given_root(4, 1.0, 1.0, rng)
+        sizes.append(min(len([l for l in t.leaves() if _under(l, c)]) for c in t.root.children))
+    frac_balanced = np.mean(np.array(sizes) == 2)
+    assert abs(frac_balanced - 1 / 3) < 4 * np.sqrt((1 / 3) * (2 / 3) / 6000)
+
+
+def _under(leaf, node):
+    n = leaf
+    while n is not None:
+        if n is node:
+            return True
+        n = n.parent
+    return False
