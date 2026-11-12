@@ -10,7 +10,7 @@ The full project design is kept privately.
 |---|---|
 | 0. Environment, CLDF pipeline, Mayan data, BEAST2 | done |
 | 1. Simulator (no borrowing) + BEAST2 calibration | **strict clock: done** (100 replicates, below). Relaxed clock: `babelfix` written and passes the likelihood debug check; coverage study not yet run (`make m1-relaxed`) |
-| 2. Bias curve vs borrowing rate, two contact models | simulator done and tested; 270 BEAST2 fits running (`make m2`) |
+| 2. Bias curve vs borrowing rate, two contact models | **done** (below) |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below) |
 | 4. Latent-donor correction | masking pipeline done; oracle vs detector refits queued. Latent-donor (level 2) model written but **does not beat level 1 yet** (below) |
 | 5. Mayan application | data built (ASJP core vocabulary, 31 languages, LexStat cognates). Draft calibrations in `infer/beast/m5_mayan_prior.json` **awaiting review**; 5 BEAST2 variants queued (`scripts/m5_mayan.py`) |
@@ -36,6 +36,44 @@ tree length much more than the absolute root. The milestone 2 summary
 therefore also reports bias in μ and tree length.
 
 ![](figures/m1_coverage_strict.png)
+
+### Milestone 2: bias from unmodelled borrowing
+
+`make m2`: 30 replicates per cell, with truth drawn from the milestone 1
+strict prior. Data are simulated with replacement borrowing at rate κ·μ
+(κ = 0.25–2) under uniform or distance-weighted contact (e-folding at 1000 y
+of patristic distance). Every fit uses the no-borrowing SDollo model.
+Replicate *i* shares its tree and parameters across cells, so the **paired
+Δ** (shift against the same replicate's κ = 0 fit) is the precise measure.
+
+| Contact | Borrowed entries | Root age, paired Δ (± s.e.) | Root 95% HPD coverage | Loss rate μ bias | Tree length bias |
+|---|---|---|---|---|---|
+| — | 0% | 0 | 1.00 | −1% | +2% |
+| uniform | 6% | −2.4% ± 0.5 | 1.00 | −11% | +11% |
+| uniform | 11% | −3.6% ± 0.6 | 1.00 | −14% | +16% |
+| uniform | 19% | −5.5% ± 0.7 | 0.97 | −17% | +23% |
+| uniform | 30% | −7.4% ± 0.8 | 0.93 | −20% | +30% |
+| distance | 6% | −1.1% ± 0.4 | 1.00 | −9% | +5% |
+| distance | 10% | −1.7% ± 0.4 | 1.00 | −12% | +7% |
+| distance | 17% | −2.8% ± 0.4 | 1.00 | −17% | +9% |
+| distance | 26% | −3.6% ± 0.5 | 1.00 | −22% | +12% |
+
+* **Direction.** Unmodelled borrowing makes the root *younger* and the loss
+  rate *lower*, and both effects grow steadily with the borrowing rate.
+  Tree length goes *up* while the root goes down, so internal nodes move
+  towards the root: the tree looks more star-like.
+* **Contact model.** Borrowing between near neighbours does about half the
+  damage to the root and tree length. The prediction that close and distant
+  borrowing bias dates in *opposite* directions is not borne out at these
+  settings: both push the same way.
+* **Size.** The root-age bias is small here because the root has a tight
+  calibration prior (N(4000, 500); milestone 1 showed the data barely narrow
+  it). The distortion shows up instead in μ (up to −22%) and tree length (up
+  to +30%). **Next experiment:** calibrate internal nodes and leave the root
+  vague, as in real analyses (milestone 5), to see how much of the μ bias
+  turns into root-age bias.
+
+![](figures/m2_bias_curve.png)
 
 ### Milestone 3: form-level detection (pair HMM)
 
