@@ -178,7 +178,7 @@ def predict_logistic(w: np.ndarray, X: np.ndarray) -> np.ndarray:
 
 
 FEATURES: Sequence[str] = ("mean", "centred", "max_centred", "single", "clade", "clade_frac", "set_size",
-                           "llr", "llr_single", "mrca_height")
+                           "llr", "llr_single", "mrca_height", "deep_sim", "deep_sim_max")
 
 
 def feature_matrix(form: Mapping, patch: Mapping, entries: Sequence[tuple[str, str]],
@@ -188,7 +188,8 @@ def feature_matrix(form: Mapping, patch: Mapping, entries: Sequence[tuple[str, s
     for e in entries:
         f, p = form[e], patch[e]
         rows.append([f["mean"], f["centred"], f["max_centred"], p["single"], p["clade"],
-                     p["clade_frac"], p["set_size"] / n_langs, p["llr"], p["llr_single"], p["mrca_height"]])
+                     p["clade_frac"], p["set_size"] / n_langs, p["llr"], p["llr_single"], p["mrca_height"],
+                     p.get("deep_sim", 0.0), p.get("deep_sim_max", 0.0)])
     return np.array(rows, float)
 
 
@@ -284,4 +285,31 @@ def transfer_scores(cog: Mapping[str, Mapping[str, str]], concept_of: Mapping[st
                 best = max(best, v)
             out[(l, k)] = {"llr": float(best) if np.isfinite(best) else 0.0, "llr_single": float(single),
                            "mrca_height": float(heights[top])}
+    return out
+
+
+def deep_similarity(pair: Mapping[tuple[str, str], Mapping[str, float]],
+                    heights: Mapping[Clade, float]) -> dict[tuple[str, str], dict[str, float]]:
+    """Form x tree: is the entry most similar to a *distant* partner?
+
+    For entry e and partner j: depth of MRCA(e, j) (relative to the root)
+    times the pair z score. ``deep_sim`` = mean over partners, ``deep_sim_max``
+    = max. A loan is unusually similar to a distant partner; an inherited word
+    is similar mostly to close relatives; a false cognate merge spans distant
+    languages but with low similarity.
+    """
+    idx = CladeIndex(heights)
+    root_h = max(heights.values()) or 1.0
+    cache: dict[frozenset, float] = {}
+    out = {}
+    for (l, k), p in pair.items():
+        if not p:
+            continue
+        v = []
+        for m, z in p.items():
+            key = frozenset((l, m))
+            if key not in cache:
+                cache[key] = heights[idx.mrca(set(key))] / root_h
+            v.append(cache[key] * z)
+        out[(l, k)] = {"deep_sim": float(np.mean(v)), "deep_sim_max": float(np.max(v))}
     return out

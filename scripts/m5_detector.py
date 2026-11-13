@@ -28,7 +28,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from hmm.pairhmm import pair_scores  # noqa: E402
-from hmm.phylo import (FEATURES, feature_matrix, fit_logistic, patchiness_scores,  # noqa: E402
+from hmm.phylo import (FEATURES, deep_similarity, feature_matrix, fit_logistic, patchiness_scores,  # noqa: E402
                        predict_logistic, set_centred_scores, transfer_scores, upgma_tree)
 from infer.beastxml import draw_truth, load_prior  # noqa: E402
 from sim.borrowing import BorrowingParams, simulate_with_borrowing  # noqa: E402
@@ -44,10 +44,12 @@ KAPPA = 0.5
 
 
 def features(wl: dict, concept_of: dict) -> tuple[list, np.ndarray]:
-    form = set_centred_scores(pair_scores(wl))
+    pair = pair_scores(wl)
+    form = set_centred_scores(pair)
     H = upgma_tree(wl, concept_of)
     pa, tr = patchiness_scores(wl, concept_of, list(H)), transfer_scores(wl, concept_of, H)
-    patch = {e: {**pa[e], **tr[e]} for e in pa}
+    ds = deep_similarity(pair, H)
+    patch = {e: {**pa[e], **tr[e], **ds.get(e, {})} for e in pa}
     entries = [e for e in form]
     X = feature_matrix(form, patch, entries, len(wl))
     return entries, (X - X.mean(0)) / (X.std(0) + 1e-9)

@@ -11,7 +11,7 @@ The full project design is kept privately.
 | 0. Environment, CLDF pipeline, Mayan data, BEAST2 | done |
 | 1. Simulator (no borrowing) + BEAST2 calibration | **strict clock: done** (100 replicates, below). Relaxed clock: `babelfix` written and passes the likelihood debug check; coverage study not yet run (`make m1-relaxed`) |
 | 2. Bias curve vs borrowing rate, two contact models | **done** (below), plus 2b: under a realistic calibration design (vague root, recent calibrations) the root bias is 30–50% |
-| 3. Phoneme strings + pair HMM, ROC | **done** (below) |
+| 3. Phoneme strings + pair HMM, ROC | **done** (below); 3b/3c: level-3 detector (forms + tree) raises AUC from 0.61–0.67 to 0.77–0.80 with correct cognates; needs 100–200 concepts with automated cognates |
 | 4. Latent-donor correction | **done** (below): masking the true loans removes the bias; masking detector flags barely helps. Latent-donor (level 2) model does not beat level 1 |
 | 5. Mayan application | **runs done** (below), but the root age is implausibly young and the draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
 
@@ -122,6 +122,67 @@ partners.
   z > 1 the detector has precision about 0.42 and recall about 0.32 (κ = 1).
 
 ![](figures/m3_roc.png)
+
+### Milestone 3b/3c: level 3, forms plus tree
+
+Level 1 mistakes retentions for loans and ignores the tree. Level 3
+(`hmm/phylo.py`) adds, per entry (language, cognate set):
+
+* **set-centred form scores**: similarity relative to the other pairs in the
+  same set, so a word that is similar everywhere (a retention) is not flagged;
+* **Dollo patchiness**: losses saved, in parsimony and likelihood versions
+  (branch lengths in expected losses per class), by explaining the entry or a
+  clade containing it as a transfer; and the depth of the set's MRCA;
+* **form × depth** (`deep_sim_max`): how similar the entry is to its most
+  distant partner (a loan is similar to a distant language; a false cognate
+  merge spans distant languages with dissimilar forms);
+* a logistic combination trained on simulations, always evaluated on
+  held-out replicates (`scripts/m3b_detector.py`).
+
+Pooled held-out AUC, 10 languages × 200 concepts, true cognate sets, UPGMA
+tree, 20 replicates (`scripts/m3b_detector.py`):
+
+| Contact, phonology | level 1 | level 3 | precision at base rate |
+|---|---|---|---|
+| uniform, default | 0.67 | **0.80** | 0.29 → 0.43 |
+| uniform, Mayan-like (CVC, stable segments) | 0.62 | **0.79** | 0.21 → 0.39 |
+| distance, default | 0.67 | **0.78** | 0.26 → 0.34 |
+| distance, Mayan-like | 0.61 | **0.77** | 0.17 → 0.31 |
+
+The true tree gains only about 0.01 over the UPGMA tree. The strongest single
+feature is a deep MRCA with few members (an old but patchy set).
+
+**On real Mayan data** (`scripts/m5_detector.py`), level 3 no longer ranks the
+retentions *uk'* "louse" highly (ranks 364–901 of 1155, against 3–6 under
+level 1), but its top hits are LexStat coding errors (e.g. Akatek *wonan* and
+Chicomuceltec *ch'en* "mountain" merged in one set). A false merge looks like
+an old, patchy set. Training on simulations recoded by the same LexStat
+pipeline brought held-out AUC down to 0.56: on short Mayan-like words LexStat
+is only slightly less accurate (B-cubed F 0.83 vs 0.89–0.93 for longer
+words), but its errors give inherited sets deep, patchy patterns too, and the
+MRCA-depth feature falls from 0.63 to 0.54.
+
+**List length decides it** (`scripts/m3c_list_length.py`; 31 languages,
+Mayan-like phonology, 6 replicates, held-out AUC):
+
+| Concepts | cognates | level 1 | level 3 |
+|---|---|---|---|
+| 40 | true | 0.59 | 0.67 |
+| 40 | LexStat | 0.58 | **0.55** |
+| 100 | true | 0.61 | 0.73 |
+| 100 | LexStat | 0.61 | **0.64** |
+| 200 | true | 0.63 | 0.76 |
+| 200 | LexStat | 0.63 | **0.69** |
+
+With 40 concepts and automated cognates there is not enough information for
+level 3 to beat level 1. At 100–200 concepts it does, by 0.03–0.06 with
+automated cognates and 0.12–0.13 with correct ones. A borrowing-corrected
+Mayan date therefore needs longer lists (100–200 concepts) and better cognate
+coding (expert judgements, or morpheme-level partial cognates, since many
+ASJP errors come from affixes such as *-al*, *-il*), not only a better
+detector. The ASJP 40-item Mayan data cannot support it.
+
+![](figures/m3b_detector.png)
 
 ### Milestone 4: level 2 (negative so far)
 
