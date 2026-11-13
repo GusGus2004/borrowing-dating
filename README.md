@@ -184,6 +184,42 @@ detector. The ASJP 40-item Mayan data cannot support it.
 
 ![](figures/m3b_detector.png)
 
+### Morpheme-level (partial) cognates: robust in simulation, over-merges on real data
+
+Many ASJP Mayan coding errors involve affixes (*eh* / *eh-al* "tooth", *im* /
+*im-il* "breast"). `pipeline.asjp` now has data-driven suffix discovery
+(vowel-initial tails that turn one form of a concept into another in at
+least 4 concepts: *-il*, *-al*, *-el*, *-ax*), segmentation, and partial
+cognates (LingPy `Partial`, UPGMA); each word takes the cognate ID of its
+most widespread non-suffix morpheme. The simulator can now add Mayan-style
+suffixes (`PhonologyParams.suffix_rate`), which keep cognacy.
+
+B-cubed F against true cognates (`scripts/m5_cognate_eval.py`; 31 languages
+× 40 concepts, Mayan-like phonology, 4 replicates; 3%, 8% and 14% of words
+suffixed, against about 10% observed in the ASJP Mayan lists):
+
+| Method | no suffixes | 3e-5 | 7e-5 |
+|---|---|---|---|
+| LexStat 0.75, whole word (current) | 0.868 | 0.857 | 0.838 |
+| partial SCA 0.45 | 0.851 | 0.848 | 0.850 |
+| partial LexStat 0.75 | 0.868 | 0.864 | 0.852 |
+| partial LexStat 0.85 | **0.877** | **0.869** | **0.854** |
+
+In simulation, partial LexStat is never worse and is more robust to
+suffixation (+0.01 to +0.02). On the real Mayan data the same setting
+over-merges: "eye" puts *sat*, *wich*, *b'aq' wach* and *hut* in one set, and
+"stone" merges *ch'en*, *tun* and *k'e'en*. Real lists contain compounds and
+phrases (*b'aq' wach*), whose shared generic morphemes link different roots,
+and the simulator has none. Identical *wits* "mountain" forms are still split
+in some languages (2% of identical pairs). The pipeline therefore stays on
+whole-word LexStat 0.75.
+
+The lesson is the same as for the LexStat threshold: settings tuned on
+simulation do not transfer to the real lists, and there is no gold standard
+to tune against. Expert cognate judgements (for example Kaufman's Mayan
+etymological dictionary) on a longer concept list are needed both as data
+and as a benchmark.
+
 ### Milestone 4: level 2 (negative so far)
 
 Two latent-donor models are in `hmm/latent.py`, both fitted by EM. Mean AUC

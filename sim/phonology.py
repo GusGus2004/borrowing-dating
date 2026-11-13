@@ -16,6 +16,10 @@ Forms are strings of single-character segments from :data:`INVENTORY`
 * **Sporadic change.** Independently, at rate ``sporadic_rate`` per concept
   per lineage, one word of the lineage gets a one-segment substitution,
   insertion or deletion (analogy, irregular developments, noise).
+* **Suffixation.** At rate ``suffix_rate`` per concept per lineage, a word
+  without a suffix gains one from ``suffixes`` (Mayan-style -Vl, -Vx). Its
+  cognacy is unchanged; later sound changes apply to the whole word. This
+  is what makes whole-word cognate detection split true cognates.
 * **Borrowing** (in :mod:`sim.borrowing`) copies the donor's current form;
   from then on only the recipient's own changes apply to it.
 
@@ -63,6 +67,8 @@ class PhonologyParams:
     # everywhere (e.g. Mayan *ha'* "water", *uk'* "louse").
     stable_segments: str = ""
     stable_weight: float = 1.0
+    suffix_rate: float = 0.0       # suffix gains per concept per lineage per year
+    suffixes: tuple = ("il", "al", "el", "ax")
 
     def __post_init__(self) -> None:
         if self.change_rate < 0 or self.sporadic_rate < 0:
@@ -165,6 +171,10 @@ class LineagePhonology:
         ages = np.concatenate([top_age - rng.random(n_rule) * span,
                                top_age - rng.random(n_spor) * span])
         kinds = ["rule"] * n_rule + ["sporadic"] * n_spor
+        if p.suffix_rate > 0:  # drawn only when enabled, so default runs are unchanged
+            n_suf = rng.poisson(p.suffix_rate * n_concepts * span)
+            ages = np.concatenate([ages, top_age - rng.random(n_suf) * span])
+            kinds += ["suffix"] * n_suf
         order = np.argsort(-ages)
         self.events = [(float(ages[i]), kinds[i]) for i in order]
         self.pos = 0
@@ -186,6 +196,10 @@ class LineagePhonology:
                 for k in keys:
                     forms[k] = rule.apply(forms[k])
                 self.rules.append((age, str(rule)))
+            elif kind == "suffix":
+                k = keys[int(rng.integers(len(keys)))]
+                if not any(forms[k].endswith(x) for x in self.p.suffixes):
+                    forms[k] += self.p.suffixes[int(rng.integers(len(self.p.suffixes)))]
             else:
                 k = keys[int(rng.integers(len(keys)))]
                 forms[k] = sporadic_change(forms[k], rng)

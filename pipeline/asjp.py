@@ -72,6 +72,92 @@ def lexstat_cognates(forms: list[dict], threshold: float = 0.75, runs: int = 100
     return {lex[i, "form_id"]: f"{lex[i, 'concept']}-{lex[i, 'cogid']}" for i in lex}
 
 
+VOWEL_SEGS = set("aeiouɐɛɔəɪʊæɨ")
+
+
+def discover_suffixes(forms: list[dict], min_concepts: int = 4, max_len: int = 3) -> list[tuple[str, ...]]:
+    """Data-driven suffixes: VC(C) tails that turn one form of a concept into another.
+
+    For every concept, if form A = form B + tail (B at least 2 segments, tail
+    1-``max_len`` segments), the tail is a candidate. Tails seen in at least
+    ``min_concepts`` concepts and starting with a vowel are kept (single
+    consonants such as glottal stops are too often phonological).
+    """
+    by: dict[str, set] = defaultdict(set)
+    for f in forms:
+        t = tuple(f["Segments"].split())
+        if "+" not in t:
+            by[f["Parameter_ID"]].add(t)
+    seen: dict[tuple, set] = defaultdict(set)
+    for c, fs in by.items():
+        for a in fs:
+            for b in fs:
+                if len(a) > len(b) >= 2 and a[:len(b)] == b and len(a) - len(b) <= max_len:
+                    seen[a[len(b):]].add(c)
+    return sorted((t for t, cs in seen.items()
+                   if len(cs) >= min_concepts and len(t) >= 2 and t[0][0] in VOWEL_SEGS),
+                  key=lambda t: (-len(seen[t]), t))
+
+
+def segment(tokens: list[str], suffixes: list[tuple[str, ...]], min_stem: int = 2) -> list[str]:
+    """Mark morpheme boundaries ('+'): ASJP word breaks, plus one known suffix per word."""
+    words, cur = [], []
+    for t in tokens + ["+"]:
+        if t == "+":
+            if cur:
+                words.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    out = []
+    for w in words:
+        for suf in suffixes:
+            if len(w) - len(suf) >= min_stem and tuple(w[-len(suf):]) == suf:
+                w = w[:-len(suf)] + ["+"] + list(suf)
+                break
+        out += (["+"] if out else []) + w
+    return out
+
+
+def partial_cognates(forms: list[dict], threshold: float = 0.45, seed: int = 1,
+                     suffixes: list | None = None, method: str = "sca") -> dict[str, str]:
+    """Form ID -> cognate set ID via morpheme-level (partial) cognates.
+
+    Morphemes are clustered within concepts (LingPy ``Partial``, UPGMA); each
+    word then takes the partial cognate ID of its *salient* morpheme, the one
+    whose partial set is largest within the concept (ties: the longest
+    morpheme). Suffixes found by :func:`discover_suffixes` are segmented off
+    first, so *eh* and *eh-al* can share a root.
+    """
+    from lingpy.compare.partial import Partial
+
+    random.seed(seed)
+    np.random.seed(seed)
+    if suffixes is None:
+        suffixes = discover_suffixes(forms)
+    D = {0: ["doculect", "concept", "ipa", "tokens", "form_id"]}
+    for i, f in enumerate(forms, start=1):
+        D[i] = [f["Language_ID"], f["Parameter_ID"], f["Form"], segment(f["Segments"].split(), suffixes), f["ID"]]
+    part = Partial(D, check=False)
+    if method == "lexstat":
+        part.get_partial_scorer(runs=1000)
+    part.partial_cluster(method=method, threshold=threshold, ref="cogids", cluster_method="upgma")
+    size: Counter = Counter()
+    for i in part:
+        for c in part[i, "cogids"]:
+            size[(part[i, "concept"], c)] += 1
+    out = {}
+    for i in part:
+        morphs = " ".join(part[i, "tokens"]).split(" + ")
+        ids = part[i, "cogids"]
+        # suffixes are never the root: only stems (non-final, or not a known suffix) are eligible
+        sufs = {" ".join(t) for t in suffixes}
+        ok = [j for j in range(len(ids)) if j == 0 or morphs[j] not in sufs] or [0]
+        best = max(ok, key=lambda j: (size[(part[i, "concept"], ids[j])], len(morphs[j].split())))
+        out[part[i, "form_id"]] = f"{part[i, 'concept']}-p{ids[best]}"
+    return out
+
+
 def build(asjp_cldf: Path | str, outdir: Path | str, threshold: float = 0.75, runs: int = 1000,
           min_core: int = 28, seed: int = 1, method: str = "lexstat") -> dict:
     outdir = Path(outdir)
@@ -79,7 +165,10 @@ def build(asjp_cldf: Path | str, outdir: Path | str, threshold: float = 0.75, ru
     langs, params, forms = select_mayan(asjp_cldf, min_core)
     n_loans = sum(f["Loan"] == "true" for f in forms)
     forms = [f for f in forms if f["Loan"] != "true" and f["Segments"].strip()]
-    cog = lexstat_cognates(forms, threshold, runs, seed, method)
+    if method == "partial":
+        cog = partial_cognates(forms, threshold, seed)
+    else:
+        cog = lexstat_cognates(forms, threshold, runs, seed, method)
 
     ds = Wordlist.in_dir(outdir)
     ds.add_component("LanguageTable")
