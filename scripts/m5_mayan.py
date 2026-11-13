@@ -6,6 +6,8 @@ Variants (all with infer/beast/m5_mayan_prior.json unless noted):
     strict_cholan     + contested Classic Ch'olti'an calibration (sensitivity)
     strict_t065       cognates at LexStat threshold 0.65 (cognate-coding sensitivity)
     strict_t085       cognates at LexStat threshold 0.85
+    strict_cholantzeltalan  + candidate Cholan-Tzeltalan minimum age (>= 1700 BP)
+    strict_sca055     cognates by SCA distance at 0.55 (LexStat splits identical forms on 40-item lists)
 
 Subcommands: prepare | run [--jobs N] [--variants ...] | summarise
 """
@@ -35,10 +37,13 @@ ASJP = ROOT / "data/raw/asjp/cldf"
 KAUFMAN_BP = 4200.0  # c. 2200 BC, glottochronological (comparison only)
 
 
-def dataset(threshold: float) -> Path:
-    d = ROOT / ("data/derived/asjp_mayan" if threshold == 0.75 else f"data/derived/asjp_mayan_t{int(threshold * 100):03d}")
+def dataset(threshold: float, method: str = "lexstat") -> Path:
+    if method == "lexstat":
+        d = ROOT / ("data/derived/asjp_mayan" if threshold == 0.75 else f"data/derived/asjp_mayan_t{int(threshold * 100):03d}")
+    else:
+        d = ROOT / f"data/derived/asjp_mayan_{method}{int(threshold * 100):03d}"
     if not (d / "Wordlist-metadata.json").exists():
-        build(ASJP, d, threshold=threshold)
+        build(ASJP, d, threshold=threshold, method=method)
     return d / "Wordlist-metadata.json"
 
 
@@ -47,15 +52,21 @@ def variants() -> dict[str, tuple[dict, float]]:
     relaxed["clock_sd"] = {"dist": "exponential", "mean": 0.3}
     cholan = copy.deepcopy(PRIOR)
     cholan["calibrations"] = PRIOR["calibrations"] + PRIOR["sensitivity_calibrations"]
+    ct = copy.deepcopy(PRIOR)
+    ct["calibrations"] = PRIOR["calibrations"] + PRIOR["candidate_calibrations"]
     return {"strict": (PRIOR, 0.75), "relaxed": (relaxed, 0.75), "strict_cholan": (cholan, 0.75),
-            "strict_t065": (PRIOR, 0.65), "strict_t085": (PRIOR, 0.85)}
+            "strict_t065": (PRIOR, 0.65), "strict_t085": (PRIOR, 0.85), "strict_sca055": (PRIOR, ("sca", 0.55)),
+            "strict_cholantzeltalan": (ct, 0.75)}
 
 
 def cmd_prepare(a) -> None:
     for name, (prior, thr) in variants().items():
         d = OUT / name
         d.mkdir(parents=True, exist_ok=True)
-        cm = read_cognate_matrix(dataset(thr), concept_level_missing=True)
+        method, t = thr if isinstance(thr, tuple) else ("lexstat", thr)
+        if (d / "beast.xml").exists() and (d / "done").exists():
+            continue
+        cm = read_cognate_matrix(dataset(t, method), concept_level_missing=True)
         (d / "beast.xml").write_text(render_xml(cm, prior, stem="beast"))
         (d / "prior.json").write_text(json.dumps(prior, indent=2))
         print(f"{name}: {cm.shape[0]} languages x {cm.shape[1]} cognate sets (threshold {thr})")

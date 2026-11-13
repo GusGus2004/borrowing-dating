@@ -1,31 +1,53 @@
 {
   "_comment": "Milestone 5: Mayan ASJP core vocabulary (31 languages, LexStat cognates). Ages in years before AD 2000 (ASJP lists are mostly 20th century). STATUS: DRAFT, every calibration and prior below must be checked by George and the supervisor before any date is reported. Glottochronological dates (e.g. Kaufman's ~2200 BC for Proto-Mayan, his subgroup dates) are deliberately NOT used as calibrations, since they would make the analysis circular: the root age is what we test against them.",
   "root_age": {
-    "dist": "uniform", "lower": 1500.0, "upper": 9000.0,
+    "dist": "uniform",
+    "lower": 1500.0,
+    "upper": 9000.0,
     "_why": "Broad: contains every published Proto-Mayan estimate (c. 6600 BC to c. 209 BC, i.e. 8600-2209 BP) with margin, so the root is estimated, not assumed."
   },
   "yule_birth_rate": {
-    "dist": "lognormal", "meanlog": -6.9, "sdlog": 1.5,
+    "dist": "lognormal",
+    "meanlog": -6.9,
+    "sdlog": 1.5,
     "_why": "Estimated; vague prior centred near 1e-3 per year."
   },
   "loss_rate": {
-    "dist": "lognormal", "meanlog": -9.0, "sdlog": 1.0,
+    "dist": "lognormal",
+    "meanlog": -9.0,
+    "sdlog": 1.0,
     "_why": "Basic-vocabulary replacement of roughly 10-30% per millennium (mean ~2e-4 per class per year); sdlog 1 spans about an order of magnitude either way. This prior carries absolute-time information alongside the calibrations; it is a modelling choice to review."
   },
   "calibrations": [
     {
       "name": "Yucatecan",
-      "taxa": ["ITZAJ", "LACANDON", "MAYA_YUCATECA", "MOPAN"],
+      "taxa": [
+        "ITZAJ",
+        "LACANDON",
+        "MAYA_YUCATECA",
+        "MOPAN"
+      ],
       "monophyletic": true,
-      "dist": {"dist": "normal", "mean": 1050.0, "sd": 200.0},
+      "dist": {
+        "dist": "normal",
+        "mean": 1050.0,
+        "sd": 200.0
+      },
       "source": "Hofling (2018) places Proto-Yucatecan at about AD 950 (about 1050 BP); Hofling (2006) and Aissen, England and Zavala Maldonado (eds., 2017) give Mopan as the first split. Subgroup monophyly is uncontroversial.",
       "status": "soft; check whether Hofling's date is independent of glottochronology"
     },
     {
       "name": "Huastecan",
-      "taxa": ["HUASTEC", "CHICOMUCELTEC"],
+      "taxa": [
+        "HUASTEC",
+        "CHICOMUCELTEC"
+      ],
       "monophyletic": true,
-      "dist": {"dist": "uniform", "lower": 480.0, "upper": 1100.0},
+      "dist": {
+        "dist": "uniform",
+        "lower": 480.0,
+        "upper": 1100.0
+      },
       "source": "Kaufman (1980:101), Kaufman and Justeson (2008), and Robertson and Houston (2015:32) place the differentiation of Chicomuceltec from Huastec in the Postclassic (here AD 900-1521). Qualitative, not glottochronological.",
       "status": "soft; qualitative period assignment"
     }
@@ -33,9 +55,17 @@
   "sensitivity_calibrations": [
     {
       "name": "Cholan",
-      "taxa": ["CHOL_TUMBALA", "CHONTAL_TABASCO", "CHORTI"],
+      "taxa": [
+        "CHOL_TUMBALA",
+        "CHONTAL_TABASCO",
+        "CHORTI"
+      ],
       "monophyletic": true,
-      "dist": {"dist": "uniform", "lower": 1750.0, "upper": 4000.0},
+      "dist": {
+        "dist": "uniform",
+        "lower": 1750.0,
+        "upper": 4000.0
+      },
       "source": "Houston, Robertson and Stuart (2000, Current Anthropology 41:321-356): the Classic inscriptions (from c. AD 250) record Classic Ch'olti'an, ancestral to Eastern Cholan, which implies the Eastern/Western Cholan split predates c. 1750 BP.",
       "status": "CONTESTED: Mora-Marin argues the shared traits are retentions and that Cholan diversification is Postclassic. Use only as a sensitivity analysis."
     }
@@ -45,5 +75,25 @@
     "log_every": 5000,
     "tree_log_every": 20000,
     "burnin_frac": 0.1
-  }
+  },
+  "candidate_calibrations": [
+    {
+      "name": "CholanTzeltalan",
+      "taxa": [
+        "CHOL_TUMBALA",
+        "CHONTAL_TABASCO",
+        "CHORTI",
+        "TZELTAL_BACHAJON",
+        "TZOTZIL_SAN_ANDRES"
+      ],
+      "monophyletic": true,
+      "dist": {
+        "dist": "uniform",
+        "lower": 1700.0,
+        "upper": 5000.0
+      },
+      "source": "Classic Lowland inscriptions are written in a Ch'olan language (Houston, Robertson and Stuart 2000), so Ch'olan had separated from Tzeltalan before the earliest securely dated text, Tikal Stela 29 (AD 292, about 1708 BP). Minimum-age constraint; upper bound deliberately vague.",
+      "status": "DRAFT candidate, proposed after the main runs gave an implausibly young root. Mora-Marin's objection concerns the internal Cholan split, not this node; check that it does not extend to the Cholan-Tzeltalan split, and whether Tojolabal should be excluded."
+    }
+  ]
 }

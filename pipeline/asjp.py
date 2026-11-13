@@ -52,8 +52,12 @@ def select_mayan(asjp_cldf: Path | str, min_core: int = 28) -> tuple[list[dict],
 
 
 def lexstat_cognates(forms: list[dict], threshold: float = 0.75, runs: int = 1000,
-                     seed: int = 1) -> dict[str, str]:
-    """Form ID -> cognate set ID ("<concept>-<cluster>") by LingPy LexStat."""
+                     seed: int = 1, method: str = "lexstat") -> dict[str, str]:
+    """Form ID -> cognate set ID ("<concept>-<cluster>") by LingPy LexStat.
+
+    ``method="sca"`` uses LingPy's language-independent SCA distances instead
+    of LexStat's pair-specific correspondence scores (more robust on short lists).
+    """
     from lingpy import LexStat
 
     random.seed(seed)
@@ -62,19 +66,20 @@ def lexstat_cognates(forms: list[dict], threshold: float = 0.75, runs: int = 100
     for i, f in enumerate(forms, start=1):
         D[i] = [f["Language_ID"], f["Parameter_ID"], f["Form"], f["Segments"].split(), f["ID"]]
     lex = LexStat(D, check=False)
-    lex.get_scorer(runs=runs, preprocessing=False)
-    lex.cluster(method="lexstat", threshold=threshold, ref="cogid", cluster_method="upgma")
+    if method == "lexstat":
+        lex.get_scorer(runs=runs, preprocessing=False)
+    lex.cluster(method=method, threshold=threshold, ref="cogid", cluster_method="upgma")
     return {lex[i, "form_id"]: f"{lex[i, 'concept']}-{lex[i, 'cogid']}" for i in lex}
 
 
 def build(asjp_cldf: Path | str, outdir: Path | str, threshold: float = 0.75, runs: int = 1000,
-          min_core: int = 28, seed: int = 1) -> dict:
+          min_core: int = 28, seed: int = 1, method: str = "lexstat") -> dict:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     langs, params, forms = select_mayan(asjp_cldf, min_core)
     n_loans = sum(f["Loan"] == "true" for f in forms)
     forms = [f for f in forms if f["Loan"] != "true" and f["Segments"].strip()]
-    cog = lexstat_cognates(forms, threshold, runs, seed)
+    cog = lexstat_cognates(forms, threshold, runs, seed, method)
 
     ds = Wordlist.in_dir(outdir)
     ds.add_component("LanguageTable")
@@ -84,7 +89,7 @@ def build(asjp_cldf: Path | str, outdir: Path | str, threshold: float = 0.75, ru
     ds.properties["dc:title"] = "Mayan ASJP core vocabulary with LexStat cognates"
     ds.properties["dc:description"] = (
         f"Derived from lexibank/asjp v21.1: one doculect per Glottolog languoid, 40 core concepts, "
-        f"ASJP-flagged loans removed, cognates by LingPy LexStat (threshold {threshold}, {runs} runs, "
+        f"ASJP-flagged loans removed, cognates by LingPy {method} (threshold {threshold}, {runs} runs, "
         f"seed {seed}).")
     ds.write(
         LanguageTable=[{"ID": l["ID"], "Name": l["Name"], "Glottocode": l["Glottocode"] or None,

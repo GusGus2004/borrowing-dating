@@ -10,7 +10,7 @@ The full project design is kept privately.
 |---|---|
 | 0. Environment, CLDF pipeline, Mayan data, BEAST2 | done |
 | 1. Simulator (no borrowing) + BEAST2 calibration | **strict clock: done** (100 replicates, below). Relaxed clock: `babelfix` written and passes the likelihood debug check; coverage study not yet run (`make m1-relaxed`) |
-| 2. Bias curve vs borrowing rate, two contact models | **done** (below) |
+| 2. Bias curve vs borrowing rate, two contact models | **done** (below), plus 2b: under a realistic calibration design (vague root, recent calibrations) the root bias is 30–50% |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below) |
 | 4. Latent-donor correction | **done** (below): masking the true loans removes the bias; masking detector flags barely helps. Latent-donor (level 2) model does not beat level 1 |
 | 5. Mayan application | **runs done** (below), but the root age is implausibly young and the draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
@@ -74,6 +74,32 @@ Replicate *i* shares its tree and parameters across cells, so the **paired
   turns into root-age bias.
 
 ![](figures/m2_bias_curve.png)
+
+### Milestone 2b: the bias is large under a realistic calibration design
+
+Milestone 2 inferred with the generating root prior N(4000, 500), which holds
+the root in place. Real analyses give the root a vague prior and calibrate a
+few recent clades. `scripts/m2b_calibration.py` refits the same milestone 2
+datasets with root ~ Uniform(1500, 9000), an estimated Yule rate, and up to
+two calibrations on the oldest non-nested clades aged 8–40% of the root
+(Normal(true age, 20%); Mayan Yucatecan/root ≈ 0.25). 30 replicates per cell.
+
+| Cell | borrowed | root rel. bias | ± se | coverage | μ rel. bias | M2 root bias (same data) |
+|---|---|---|---|---|---|---|
+| no borrowing | 0% | +0.1% | 1.9 | 1.00 | +1% | +1.9% |
+| uniform, κ = 1 | 19% | **−40.8%** | 2.2 | 0.13 | +34% | −3.6% |
+| uniform, κ = 2 | 30% | **−49.3%** | 1.7 | 0.00 | +46% | −5.4% |
+| distance, κ = 2 | 26% | **−28.9%** | 1.8 | 0.37 | +7% | −1.7% |
+
+Without borrowing the design is unbiased and calibrated. With borrowing the
+root comes out 30–50% too young and the 95% HPD almost never contains the
+truth. The mechanism: the recent calibrations fix the rate of change near the
+tips, while borrowing makes deep lineages share more cognates than descent
+alone would leave, so the deep tree is compressed. The loss rate is now
+*over*estimated (milestone 2, with the root held, underestimated it). The
+milestone 2 numbers understate the problem; this design is the relevant one.
+
+![](figures/m2b_calibration.png)
 
 ### Milestone 3: form-level detection (pair HMM)
 
@@ -156,27 +182,38 @@ years before AD 2000.
 | strict + Cholan calibration | 1486 BC | 2260 BC – 728 BC | 2.8e-4 |
 | strict, cognate threshold 0.65 | 196 BC | 905 BC – AD 465 | 5.2e-4 |
 | strict, cognate threshold 0.85 | 454 BC | 1283 BC – AD 292 | 3.5e-4 |
+| strict, SCA cognates (0.55) | 292 BC | 1041 BC – AD 448 | 3.9e-4 |
+| strict + candidate Cholan–Tzeltalan ≥ 1700 BP | 912 BC | 1605 BC – 301 BC | 3.4e-4 |
 
 These are too young. The HPD reaches AD 300, when Classic inscriptions already
 show well-separated Mayan languages, and every published Proto-Mayan estimate
 is older (Kaufman's glottochronological c. 2200 BC among them). What the runs
 show:
 
-* **Not the cognate threshold.** 0.65, 0.75 and 0.85 give similar roots.
+* **Not the priors.** Sampling from the prior alone gives a root median of
+  4423 BP (HPD 1501–8449); the young root comes from the data.
+* **Not the cognate method.** LexStat on 40-item lists does make errors
+  (identical forms such as *wits* "mountain" end up in 7 sets; 115 of 255 sets
+  are singletons), but SCA clustering, which never splits identical forms
+  (190 sets, 58 singletons), gives the same root (292 BC). Thresholds 0.65,
+  0.75 and 0.85 also agree.
 * **Not rate variation.** The relaxed clock's rate SD is small (median 0.12,
   HPD 0–0.26) and the root is unchanged.
-* **The data pull young against an older anchor.** With the Cholan
-  calibration the root moves to 1486 BC, but the Cholan node sits on its lower
-  bound (median 1834 BP vs bound 1750 BP).
-* **Likely causes**, to be tested: both main calibrations are recent
-  (< 1100 BP), so the root is an extrapolation of their rate; within-Mayan
-  borrowing biases roots young (milestone 2); the loss rate posterior is
-  about twice the prior mean, so the loss-rate prior and the 40-item list's
-  stability deserve a look; LexStat may merge distinct cognates at deep
-  splits.
+* **The data pull young against every older anchor.** With the contested
+  Cholan calibration the root moves to 1486 BC and with the candidate
+  Cholan–Tzeltalan minimum (Classic inscriptions are Ch'olan from AD 292) to
+  912 BC, but in both cases the older node sits on its lower bound (Cholan
+  median 1834 BP vs bound 1750; Cholan–Tzeltalan 1846 vs 1700).
+* **This is the pattern borrowing produces.** Milestone 2b shows that with
+  recent calibrations and a vague root, borrowing makes roots 30–50% too
+  young and inflates the loss rate, which is what the Mayan fits show
+  (loss rate about twice its prior mean, older anchors pinned at their
+  bounds). The Mayan Highlands and Lowlands are known contact zones. This is
+  consistent with, not proof of, borrowing as the cause.
 
-The next step is an older, independent internal calibration (agreed with the
-supervisor), then a borrowing-masked fit.
+Next: agree the calibrations (including the candidate Cholan–Tzeltalan
+minimum) with the supervisor, and develop a detector that works on real data
+so a borrowing-corrected Mayan fit becomes possible.
 
 ![](figures/m5_root_age.png)
 
