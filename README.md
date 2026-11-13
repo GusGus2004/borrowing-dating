@@ -12,8 +12,8 @@ The full project design is kept privately.
 | 1. Simulator (no borrowing) + BEAST2 calibration | **strict clock: done** (100 replicates, below). Relaxed clock: `babelfix` written and passes the likelihood debug check; coverage study not yet run (`make m1-relaxed`) |
 | 2. Bias curve vs borrowing rate, two contact models | **done** (below) |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below) |
-| 4. Latent-donor correction | masking pipeline done; oracle vs detector refits queued. Latent-donor (level 2) model written but **does not beat level 1 yet** (below) |
-| 5. Mayan application | data built (ASJP core vocabulary, 31 languages, LexStat cognates). Draft calibrations in `infer/beast/m5_mayan_prior.json` **awaiting review**; 5 BEAST2 variants queued (`scripts/m5_mayan.py`) |
+| 4. Latent-donor correction | **done** (below): masking the true loans removes the bias; masking detector flags barely helps. Latent-donor (level 2) model does not beat level 1 |
+| 5. Mayan application | **runs done** (below), but the root age is implausibly young and the draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
 
 ## Results so far
 
@@ -125,6 +125,60 @@ The correction study (`scripts/m4_correction.py`) refits the κ = 1 milestone 2
 replicates after masking (language, concept) cells as missing, using either
 the true loans (oracle: an upper bound on what any detector can gain) or the
 level-1 detector.
+
+Root-age relative bias (mean ± s.e., 30 replicates per cell, κ = 1):
+
+| Contact | no borrowing | uncorrected | oracle mask | pair-HMM mask (z > 1) | coverage |
+|---|---|---|---|---|---|
+| uniform | +1.9% ± 1.8 | −3.6% ± 1.9 | +1.0% ± 1.8 | −3.2% ± 1.9 | 0.97–1.00 |
+| distance | +1.9% ± 1.8 | −0.8% ± 1.8 | +1.6% ± 1.8 | −0.7% ± 1.8 | 1.00 |
+
+Masking the true loans brings the root back to the no-borrowing level, at
+almost no cost in HPD width (about 1840–1860 y in every fit). Masking the
+detector's flags recovers almost none of the bias: with recall about 0.32 and
+precision about 0.42 it removes few loans and many inherited entries. The
+correction step works; detection is the bottleneck.
+
+![](figures/m4_correction.png)
+
+### Milestone 5: Mayan case study (draft calibrations, do not quote)
+
+31 Mayan languages × 40 ASJP core concepts, LexStat cognates (threshold 0.75
+unless stated), calibrations as drafted in `infer/beast/m5_mayan_prior.json`
+(Yucatecan crown Normal(1050, 200) BP; Huastecan crown Uniform(480, 1100) BP;
+root Uniform(1500, 9000) BP). 20M states per run; every ESS > 2000. Ages are
+years before AD 2000.
+
+| Variant | Proto-Mayan, median | 95% HPD | loss rate (median) |
+|---|---|---|---|
+| strict clock | 435 BC | 1304 BC – AD 307 | 4.0e-4 |
+| relaxed clock (UCLN) | 430 BC | 1303 BC – AD 326 | 4.1e-4 |
+| strict + Cholan calibration | 1486 BC | 2260 BC – 728 BC | 2.8e-4 |
+| strict, cognate threshold 0.65 | 196 BC | 905 BC – AD 465 | 5.2e-4 |
+| strict, cognate threshold 0.85 | 454 BC | 1283 BC – AD 292 | 3.5e-4 |
+
+These are too young. The HPD reaches AD 300, when Classic inscriptions already
+show well-separated Mayan languages, and every published Proto-Mayan estimate
+is older (Kaufman's glottochronological c. 2200 BC among them). What the runs
+show:
+
+* **Not the cognate threshold.** 0.65, 0.75 and 0.85 give similar roots.
+* **Not rate variation.** The relaxed clock's rate SD is small (median 0.12,
+  HPD 0–0.26) and the root is unchanged.
+* **The data pull young against an older anchor.** With the Cholan
+  calibration the root moves to 1486 BC, but the Cholan node sits on its lower
+  bound (median 1834 BP vs bound 1750 BP).
+* **Likely causes**, to be tested: both main calibrations are recent
+  (< 1100 BP), so the root is an extrapolation of their rate; within-Mayan
+  borrowing biases roots young (milestone 2); the loss rate posterior is
+  about twice the prior mean, so the loss-rate prior and the 40-item list's
+  stability deserve a look; LexStat may merge distinct cognates at deep
+  splits.
+
+The next step is an older, independent internal calibration (agreed with the
+supervisor), then a borrowing-masked fit.
+
+![](figures/m5_root_age.png)
 
 ## Quick start
 
