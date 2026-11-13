@@ -1,0 +1,101 @@
+concept	english	spanish	note	exclude
+I	I	yo		
+you	you	tu|usted|vos		
+we	we	nosotros		
+this	this	este|esto|esta		
+that	that	ese|eso|esa|aquel		
+who	who	quien		
+what	what	que		
+not	not	no		
+all	all	todo|todos		
+many	many|much	mucho|muchos		
+one	one	uno		
+two	two	dos		
+big	big|large	grande		
+long	long	largo		
+small	small|little	pequeno|chico|chiquito		
+woman	woman	mujer		
+man	man|male	hombre|varon	not "person"	
+person	person|people	persona|gente		
+fish	fish	pescado|pez		
+bird	bird	pajaro|ave		
+dog	dog	perro		
+louse	louse|head louse	piojo		
+tree	tree	arbol	"palo" (stick, wood) excluded	
+seed	seed	semilla		
+leaf	leaf	hoja		
+root	root	raiz		
+bark	bark|tree bark	corteza|cascara de arbol		
+skin	skin|hide	piel|cuero		
+flesh	flesh|meat	carne		
+blood	blood	sangre		
+bone	bone	hueso		
+grease	grease|fat	grasa|manteca|sebo		
+egg	egg	huevo		
+horn	horn	cuerno		
+tail	tail	cola		
+feather	feather	pluma		
+hair	hair|head hair	pelo|cabello		
+head	head	cabeza		
+ear	ear	oreja|oido		
+eye	eye	ojo		
+nose	nose	nariz		
+mouth	mouth	boca		
+tooth	tooth	diente		
+tongue	tongue	lengua	forms also glossed as "language/speech" excluded	idioma|lenguaje|language|habla|palabra|word
+claw	fingernail|nail|claw	uña|uña de la mano|garra		
+foot	foot	pie		
+knee	knee	rodilla		
+hand	hand	mano		
+belly	belly|stomach	estomago|barriga|vientre|panza		
+neck	neck	cuello|pescuezo		
+breast	breast|breasts	pecho|seno|senos|chiche		
+heart	heart	corazon		
+liver	liver	higado		
+drink	drink	beber	"tomar" (also "take") excluded	
+eat	eat	comer		
+bite	bite	morder		
+see	see	ver		
+hear	hear	oir		
+know	know	saber|conocer		
+sleep	sleep	dormir		
+die	die	morir|morirse		
+kill	kill	matar		
+swim	swim	nadar		
+fly	fly	volar	verb; "mosca" (the insect) is not matched	
+walk	walk	caminar|andar		
+come	come	venir		
+lie	lie down	acostarse		
+sit	sit|sit down	sentarse		
+stand	stand|stand up	pararse|estar parado		
+give	give	dar		
+say	say	decir		
+sun	sun	sol		
+moon	moon	luna		
+star	star	estrella		
+water	water	agua		
+rain	rain	lluvia|llover		
+stone	stone|rock	piedra		
+sand	sand	arena		
+earth	earth|soil|ground	tierra		
+cloud	cloud	nube		
+smoke	smoke	humo		
+fire	fire	fuego|lumbre		
+ash	ash|ashes	ceniza		
+burn	burn	quemar|arder		
+path	path|road	camino		
+mountain	mountain|hill	cerro|montaña	"monte" (bush, wild land in Mesoamerican Spanish) excluded	
+red	red	rojo|colorado		
+green	green	verde		
+yellow	yellow	amarillo		
+white	white	blanco		
+black	black	negro		
+night	night	noche		
+hot	hot	caliente		
+cold	cold	frio		
+full	full	lleno		
+new	new	nuevo		
+good	good	bueno		
+round	round	redondo		
+dry	dry	seco		
+name	name	nombre		

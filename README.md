@@ -211,14 +211,65 @@ over-merges: "eye" puts *sat*, *wich*, *b'aq' wach* and *hut* in one set, and
 "stone" merges *ch'en*, *tun* and *k'e'en*. Real lists contain compounds and
 phrases (*b'aq' wach*), whose shared generic morphemes link different roots,
 and the simulator has none. Identical *wits* "mountain" forms are still split
-in some languages (2% of identical pairs). The pipeline therefore stays on
-whole-word LexStat 0.75.
+in some languages (2% of identical pairs). Judged by eye this looked like a reason to stay on whole-word LexStat 0.75;
+the expert benchmark below shows that was wrong on balance.
 
 The lesson is the same as for the LexStat threshold: settings tuned on
 simulation do not transfer to the real lists, and there is no gold standard
 to tune against. Expert cognate judgements (for example Kaufman's Mayan
 etymological dictionary) on a longer concept list are needed both as data
 and as a benchmark.
+
+### A richer Mayan dataset and an expert benchmark: PMED Swadesh-100
+
+The lexibank `kaufmanpmed` dataset is Kaufman & Justeson's *Preliminary
+Mayan Etymological Dictionary* (2003): 40,424 forms from 83 modern varieties
+(34 languages), with 37,812 forms assigned to Kaufman's etyma. It has no
+Concepticon links, but every form carries its source gloss ("Spanish//English").
+`pipeline/pmed.py` maps it to the Swadesh 100 list (`pipeline/pmed_swadesh100.tsv`,
+English and Spanish glosses with notes and exclusions, open to review):
+
+* a form belongs to a concept only if one of its gloss senses *equals* a
+  listed gloss, so "pecho de mujer" is not "woman" and "chile diente de perro"
+  is neither "tooth" nor "dog"; Spanish enclitics are reduced (*morderlo* →
+  *morder*); "monte" (bush) and "tomar" (take) are excluded, and so are
+  "lengua" forms also glossed as "language";
+* one modern variety per Glottocode (most concepts covered); epigraphic and
+  colonial sources dropped (colonial Ch'olti' could later be a dated tip);
+* cognate sets = Kaufman's etyma.
+
+Result (`scripts/build_pmed_mayan.py` → `data/derived/pmed_mayan`): 29
+languages, 2,782 forms, 511 etyma, 43–85 concepts per language (mean 20.5
+languages per concept; 62 concepts in ≥ 20 languages). Verbs are sparse
+(*bite* 8, *kill* 7, *sit* 1 languages): PMED records few verb roots.
+Chicomuceltec and Chontal are effectively absent (2 and 3 concepts).
+Caveat: PMED lists reflexes of reconstructed etyma, so a word that is not a
+reflex of any etymon may be missing; missing cells are coded as missing.
+
+**Benchmark of automated cognates on real data** (`scripts/benchmark_cognates.py`):
+ASJP forms whose language and concept also occur in PMED are labelled with
+Kaufman's etymon when PMED has exactly one etymon for that cell (857 forms,
+103 gold sets; no spelling comparison, so spelling-based methods are not
+favoured). B-cubed against the expert labels:
+
+| Method | P | R | F |
+|---|---|---|---|
+| LexStat 0.55 | 0.937 | 0.539 | 0.685 |
+| LexStat 0.75 (current) | 0.875 | 0.720 | 0.790 |
+| LexStat 0.85 | 0.842 | 0.789 | 0.814 |
+| SCA 0.55 | 0.844 | 0.759 | 0.799 |
+| edit distance 0.75 | 0.873 | 0.775 | 0.821 |
+| partial LexStat 0.75 | 0.859 | 0.727 | 0.788 |
+| partial LexStat 0.85 | 0.826 | 0.816 | **0.821** |
+
+Every method splits more than it merges (recall < precision), so the
+current threshold is too strict. Partial LexStat at 0.85, which simulation
+also ranked first, is best on real data (+0.03 F over the current setting).
+My earlier impression, from a few concepts, that it over-merges on real data
+was wrong on balance: it does merge some compounds, but recovers more true
+cognates than it loses. A second labelling that links forms by spelling
+similarity gives the same ordering for LexStat and partial LexStat but
+favours edit distance (F 0.882), as expected from its circularity.
 
 ### Milestone 4: level 2 (negative so far)
 
