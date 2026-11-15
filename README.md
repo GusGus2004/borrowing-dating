@@ -13,7 +13,8 @@ The full project design is kept privately.
 | 2. Bias curve vs borrowing rate, two contact models | **done** (below), plus 2b: under a realistic calibration design (vague root, recent calibrations) the root bias is 30–50% |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below); 3b/3c: level-3 detector (forms + tree) raises AUC from 0.61–0.67 to 0.77–0.80 with correct cognates; needs 100–200 concepts with automated cognates |
 | 4. Latent-donor correction | **done** (below): masking the true loans removes the bias; masking detector flags barely helps. Latent-donor (level 2) model does not beat level 1 |
-| 5. Mayan application | **runs done** (below). ASJP 40 with LexStat cognates gives an implausibly young root; 5b: PMED with Kaufman's etyma gives c. 2800 BC under the same calibrations, so the young root is mostly a cognate-coding artefact. Draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
+| 5. Mayan application | **runs done** (below). ASJP 40 with LexStat cognates gives an implausibly young root; 5b: PMED with Kaufman's etyma gives c. 2800 BC under the same calibrations, so the young root comes from the ASJP/LexStat data, not the calibrations; why is open (6: in simulation LexStat errors alone bias the root by only −8%). Draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
+| 6. Cognate-coding vs borrowing bias (simulation) | **done** (below): LexStat errors alone −8% ± 5%, borrowing −29% |
 
 ## Results so far
 
@@ -357,9 +358,9 @@ show:
   young and inflates the loss rate, which is what the Mayan fits show
   (loss rate about twice its prior mean, older anchors pinned at their
   bounds). The Mayan Highlands and Lowlands are known contact zones. This is
-  consistent with, not proof of, borrowing as the cause. **Superseded by milestone 5b:**
+  consistent with, not proof of, borrowing as the cause. **See milestone 5b:**
   with Kaufman's expert etyma the root is c. 2800 BC under the same
-  calibrations, so the young root is mainly a cognate-coding artefact.
+  calibrations; milestone 6 leaves open why.
 
 Next: agree the calibrations (including the candidate Cholan–Tzeltalan
 minimum) with the supervisor, and develop a detector that works on real data
@@ -400,15 +401,55 @@ calibration is dropped because PMED lacks Chicomuceltec. Root Uniform(1500,
   still gives 1769 BC, older than every ASJP run; it also pulls the Yucatecan
   node to 1401 BP against its prior of 1050 ± 200, a sign that this coding
   overstates change. The truth plausibly lies between 1769 and 2792 BC.
-* **Revises milestone 5.** The young Mayan root there is mainly a
-  cognate-coding artefact: LexStat on 40-item ASJP lists splits true cognate
+* **Revises milestone 5** (but milestone 6 qualifies this). A first reading: the
+  young Mayan root there is mainly a cognate-coding artefact: LexStat on 40-item ASJP lists splits true cognate
   sets (benchmark above: recall 0.72), and every spurious split looks like a
   replacement, inflating the loss rate (4.2e-4 vs 1.8e-4). Borrowing remains
   a possible further bias, but the milestone 5 evidence for it is weak.
   It also shows the cost of automated cognates is large on real data, which
   matters for any borrowing correction built on them.
+  Milestone 6 finds that LexStat-style errors alone shift simulated roots by
+  only −8%, so the size of this gap is not yet explained.
 
 ![](figures/m5b_root_age.png)
+
+### Milestone 6: automated cognates alone barely bias dates in simulation
+
+`scripts/m6_cognate_coding.py`: 20 Mayan-shaped simulations (31 languages ×
+40 concepts, milestone 1 priors, Mayan-like CVC words), without borrowing and
+with uniform borrowing at κ = 1. Each dataset is fitted twice: with the true
+cognate classes, and with cognate sets re-inferred from the simulated words
+by LexStat 0.75 (exactly as for the real ASJP data). Milestone 2b
+calibration design (root Uniform(1500, 9000), Yule estimated, two internal
+calibrations at 8–40% of the root, Normal(true, 20%)); 5M states, ESS > 1400.
+
+| Cognates | Borrowing | LexStat B-cubed F | Root bias (± se) | Paired Δ vs true cognates, no borrowing | Coverage | Loss-rate bias |
+|---|---|---|---|---|---|---|
+| true | none | 1 | +2.8% ± 2.6 | 0 | 1.00 | +2% |
+| LexStat | none | 0.85 | −4.9% ± 4.1 | −7.8% ± 4.9 | 0.90 | +72% |
+| true | κ = 1 (21% borrowed) | 1 | −29.1% ± 3.1 | −31.9% ± 4.8 | 0.40 | +82% |
+| LexStat | κ = 1 | 0.84 | −27.6% ± 4.0 | −30.5% ± 5.6 | 0.30 | +133% |
+
+* **Coding errors inflate the loss rate (+72%) but hardly move the root**
+  (−8% ± 5%, paired; 14 of 20 replicates younger, range −54% to +31%). The
+  calibrations hold the time scale; the extra apparent change is absorbed
+  elsewhere in the tree. The effect does not track LexStat's accuracy or
+  whether it over- or under-splits.
+* **Borrowing dominates**: −29%, and adding LexStat errors on top changes
+  nothing (paired difference +1.5%).
+* **So simulation does not reproduce the real-data gap** of milestone 5b
+  (ASJP/LexStat about 2,000 years, or roughly 40–55%, younger than PMED).
+  Caution from the interim runs: after 3–7 replicates the LexStat-only bias
+  looked like −20 to −28%; it shrank to −5% at 20 replicates.
+* Remaining explanations for the real gap, not yet tested: (1) LexStat is
+  worse on real data (F 0.79, mostly splitting) than on these simulated
+  words (F 0.85, balanced errors), so the simulated phonology may be too
+  easy; (2) expert etyma may identify and separate some intra-Mayan loans
+  that LexStat cannot, so the PMED fit would carry less borrowing bias,
+  which would make the 5b gap partly a borrowing effect after all; (3)
+  PMED's ascertainment (bounded in 5b, but not removed).
+
+![](figures/m6_cognate_coding.png)
 
 ## Quick start
 
