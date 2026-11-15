@@ -468,6 +468,10 @@ ESS > 3000.
 | hybrid | all 1,317 | etyma where labelled, else the majority etymon of the LexStat set, else the LexStat set | 4.0 | 2976 BC | 3453–6659 | 1.3e-4 |
 | sub_partial | the same 857 | partial LexStat 0.85 | 3.4 | 899 BC | 2032–3832 | 1.5e-4 |
 | full_partial | all 1,317 | partial LexStat 0.85 | 4.1 | 1095 BC | 2424–3839 | 2.4e-4 |
+| split_lexstat | the same 857 | Kaufman's etyma + only LexStat's splits (meet) | 5.4 | 1606 BC | 2773–4606 | 2.1e-4 |
+| merge_lexstat | the same 857 | Kaufman's etyma + only LexStat's merges (join) | 1.7 | 5822 BC | 5757–8999 | 2.2e-5 |
+| split_partial | the same 857 | etyma + only partial LexStat's splits | 4.7 | 1834 BC | 2883–5035 | 1.6e-4 |
+| merge_partial | the same 857 | etyma + only partial LexStat's merges | 1.4 | 5707 BC | 5422–8997 | 1.2e-5 |
 
 * **Identical words, identical calibrations, only the cognate coding
   differs: the root moves by about 4,000 years** (sub_lexstat vs
@@ -489,6 +493,17 @@ ESS > 3000.
   LexStat. So it is *which* forms are grouped, not how many sets there are,
   that moves the date (as in milestone 6, where LexStat errors inflated the
   loss rate without changing set counts).
+* **Splits make the root young; merges do not.** Applying only LexStat's
+  real splits to Kaufman's etyma takes the root from 5246 BC (at the prior
+  bound) to 1606 BC, close to LexStat itself (1276 BC); applying only its
+  merges leaves it at the bound (5822 BC). Partial cognates behave the same
+  way (1834 BC vs 5707 BC). Partial cognates matched the expert set count
+  by adding merges, which do not affect the date, while keeping the splits,
+  which do. Each split true cognate set looks like a replacement, raising
+  the loss rate; the shallow calibrations then compress the tree.
+* **So the target for better automated coding is recall** (not splitting
+  true cognates), not precision. A threshold that trades false merges for
+  fewer splits should date better than the B-cubed-optimal one.
 * **The errors are not simply deep cognates being missed**
   (`scripts/m5c_error_depth.py`). Pairwise against Kaufman, LexStat finds
   0.70–0.73 of true-cognate pairs between major branches and 0.83 within

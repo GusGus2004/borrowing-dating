@@ -17,6 +17,11 @@ Cholan-Tzeltalan calibrations, as asjp_yuc_ct in 5b):
     full_partial  every form, morpheme-level partial LexStat 0.85 (best on the
                   expert benchmark)
     sub_partial   the labelled forms only, partial LexStat 0.85
+    split_lexstat the labelled forms, Kaufman's etyma with only LexStat's splits
+                  applied (meet of the two partitions: grouped iff grouped by both)
+    merge_lexstat ... with only LexStat's merges applied (join: grouped if grouped
+                  by either, transitively)
+    split_partial, merge_partial   the same with partial LexStat 0.85
     hybrid        every form: labelled ones take their etymon; an unlabelled
                   form takes the etymon most common among labelled forms in
                   its LexStat set, or keeps its LexStat set if there are none
@@ -55,7 +60,8 @@ CT = BASE["candidate_calibrations"][0]
 TAXA = {"Yucatecan": ["ITZAJ", "LACANDON", "MAYA_YUCATECA", "MOPAN"],
         "CholanTzeltalan": ["CHOL_TUMBALA", "CHONTAL_TABASCO", "CHORTI", "TZELTAL_BACHAJON", "TZOTZIL_SAN_ANDRES"]}
 MIN_LABELLED = 10
-VARIANTS = ("sub_expert", "sub_lexstat", "sub_partial", "full_lexstat", "full_partial", "hybrid")
+VARIANTS = ("sub_expert", "sub_lexstat", "sub_partial", "split_lexstat", "merge_lexstat", "split_partial",
+            "merge_partial", "full_lexstat", "full_partial", "hybrid")
 
 
 def labelled_forms():
@@ -75,6 +81,30 @@ def labelled_forms():
         if e and len(e) == 1:
             gold[f["ID"]] = f"{concept[f['ID']]}-{next(iter(e))}"
     return [l["ID"] for l in langs], forms, concept, gold
+
+
+def meet(a: dict, b: dict) -> dict:
+    """Finest common coarsening's opposite: forms together iff together in both partitions."""
+    return {f: f"{a[f]}|{b[f]}" for f in a}
+
+
+def join(a: dict, b: dict) -> dict:
+    """Forms together if together in either partition (transitive closure, union-find)."""
+    parent = {f: f for f in a}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for part in (a, b):
+        first = {}
+        for f, s in part.items():
+            if s in first:
+                parent[find(f)] = find(first[s])
+            else:
+                first[s] = f
+    return {f: f"j{find(f)}" for f in a}
 
 
 def matrix(languages: list[str], forms: list[dict], concept: dict, cog: dict) -> CognateMatrix:
@@ -120,6 +150,10 @@ def cmd_prepare(a) -> None:
     part = partial_cognates(forms, 0.85, method="lexstat")
     codings["full_partial"] = dict(part)
     codings["sub_partial"] = {f: part[f] for f in part if f in gold}
+    for m in ("lexstat", "partial"):
+        auto = codings[f"sub_{m}"]
+        codings[f"split_{m}"] = meet(codings["sub_expert"], auto)
+        codings[f"merge_{m}"] = join(codings["sub_expert"], auto)
     prior = copy.deepcopy(BASE)
     prior["calibrations"] = []
     for c, name in ((YUC, "Yucatecan"), (CT, "CholanTzeltalan")):
