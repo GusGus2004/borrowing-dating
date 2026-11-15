@@ -502,8 +502,11 @@ ESS > 3000.
   which do. Each split true cognate set looks like a replacement, raising
   the loss rate; the shallow calibrations then compress the tree.
 * **So the target for better automated coding is recall** (not splitting
-  true cognates), not precision. A threshold that trades false merges for
-  fewer splits should date better than the B-cubed-optimal one.
+  true cognates), not precision. Raising the threshold is not enough:
+  thresholds 0.65–0.85 gave the same root in milestone 5. The damaging
+  splits are between true cognates that look too different for any
+  similarity threshold, i.e. ones that need regular sound correspondences
+  to be recognised.
 * **The errors are not simply deep cognates being missed**
   (`scripts/m5c_error_depth.py`). Pairwise against Kaufman, LexStat finds
   0.70–0.73 of true-cognate pairs between major branches and 0.83 within
