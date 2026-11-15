@@ -194,6 +194,37 @@ def cmd_summarise(a) -> None:
         print(f"{name:12s} root {t['median']:5.0f} BP ({yr(t['median'])}), HPD {t['hpd'][0]:.0f}-{t['hpd'][1]:.0f}, "
               f"ESS {t['ess']:.0f}; loss {r['deathRate']['median']:.2e}; {cal}")
 
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    groups = [("Same 857 labelled forms", [("sub_expert", "Kaufman's etyma"), ("merge_lexstat", "etyma + LexStat's merges only"),
+                                           ("split_lexstat", "etyma + LexStat's splits only"), ("sub_lexstat", "LexStat"),
+                                           ("merge_partial", "etyma + partial's merges only"),
+                                           ("split_partial", "etyma + partial's splits only"), ("sub_partial", "partial LexStat")]),
+              ("All 1,317 forms", [("hybrid", "etyma where known (hybrid)"), ("full_partial", "partial LexStat"),
+                                   ("full_lexstat", "LexStat")])]
+    col = {"sub_expert": "#2a7f62", "hybrid": "#2a7f62", "merge_lexstat": "#7fb89f", "merge_partial": "#7fb89f",
+           "split_lexstat": "#e08a8f", "split_partial": "#e08a8f"}
+    items = [(g, n, lab) for g, xs in groups for n, lab in xs if n in rows]
+    fig, ax = plt.subplots(figsize=(7.5, 0.42 * len(items) + 1.6))
+    for k, (g, n, lab) in enumerate(items):
+        t = rows[n]["Tree.height"]
+        y = len(items) - 1 - k
+        c = col.get(n, "#4a7bb7")
+        ax.plot(t["hpd"], [y, y], color=c, lw=3)
+        ax.plot(t["median"], y, "o", color=c)
+    ax.set_yticks([len(items) - 1 - k for k in range(len(items))], [lab for _, _, lab in items], fontsize=8)
+    ax.axvline(9000, color="#999999", lw=0.8, ls=":")
+    ax.axvline(4200, color="#d1495b", ls="--", lw=1, label="Kaufman, c. 2200 BC")
+    n1 = sum(1 for g, _, _ in items if g == groups[0][0])
+    ax.axhline(len(items) - n1 - 0.5, color="#cccccc", lw=0.8)
+    ax.set_xlabel("Proto-Mayan age (years before AD 2000); dotted line = prior upper bound")
+    ax.set_title("ASJP Mayan words: only the cognate coding differs")
+    ax.legend(fontsize=8, loc="lower right")
+    fig.tight_layout()
+    fig.savefig(FIG / "m5c_cognate_coding.png", dpi=150)
+    print(f"figure -> {FIG / 'm5c_cognate_coding.png'}")
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
