@@ -466,6 +466,8 @@ ESS > 3000.
 | sub_expert | the same 857 | Kaufman's etyma | 2.6 | 5246 BC | 5262–8998 | 6.2e-5 |
 | full_lexstat | all 1,317 | LexStat 0.75 | 5.8 | 1175 BC | 2501–3953 | 3.0e-4 |
 | hybrid | all 1,317 | etyma where labelled, else the majority etymon of the LexStat set, else the LexStat set | 4.0 | 2976 BC | 3453–6659 | 1.3e-4 |
+| sub_partial | the same 857 | partial LexStat 0.85 | 3.4 | 899 BC | 2032–3832 | 1.5e-4 |
+| full_partial | all 1,317 | partial LexStat 0.85 | 4.1 | 1095 BC | 2424–3839 | 2.4e-4 |
 
 * **Identical words, identical calibrations, only the cognate coding
   differs: the root moves by about 4,000 years** (sub_lexstat vs
@@ -481,6 +483,19 @@ ESS > 3000.
   root by only −8%. The simulated words are too easy, and making them
   realistic (morphology, sound change, synonymy) is the next step for the
   simulation side.
+* **The best automated method does not help.** Partial (morpheme-level)
+  LexStat, best on the expert benchmark, gets the number of sets right on
+  the full lists (165 vs 160 for hybrid) but dates the root to 1095 BC, like
+  LexStat. So it is *which* forms are grouped, not how many sets there are,
+  that moves the date (as in milestone 6, where LexStat errors inflated the
+  loss rate without changing set counts).
+* **The errors are not simply deep cognates being missed**
+  (`scripts/m5c_error_depth.py`). Pairwise against Kaufman, LexStat finds
+  0.70–0.73 of true-cognate pairs between major branches and 0.83 within
+  low-level subgroups (partial: 0.80–0.83 vs 0.89), a modest depth trend.
+  Both methods also merge 26–49% of pairs that Kaufman assigns to
+  *different* etyma, at every depth. Which kind of error drives the young
+  root is still open.
 * **What counts as a cognate is part of the answer.** Kaufman's etyma are
   roots: derivatives and compounds of one root share an etymon, whereas
   LexStat compares whole words. Under the stochastic Dollo model a new

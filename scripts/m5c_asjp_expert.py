@@ -14,6 +14,9 @@ Cholan-Tzeltalan calibrations, as asjp_yuc_ct in 5b):
     sub_lexstat   the same forms, LexStat 0.75 sets (computed on all forms)
                   -> sub_expert vs sub_lexstat differ only in cognate coding
     full_lexstat  every form, LexStat 0.75 sets (baseline for hybrid)
+    full_partial  every form, morpheme-level partial LexStat 0.85 (best on the
+                  expert benchmark)
+    sub_partial   the labelled forms only, partial LexStat 0.85
     hybrid        every form: labelled ones take their etymon; an unlabelled
                   form takes the etymon most common among labelled forms in
                   its LexStat set, or keeps its LexStat set if there are none
@@ -40,7 +43,7 @@ from analysis.mcmc import ess, hpd, read_log  # noqa: E402
 from benchmark_cognates import ASJP, ASJP2SW, PMED  # noqa: E402
 from infer.beastrun import run_all  # noqa: E402
 from infer.beastxml import load_prior, render_xml  # noqa: E402
-from pipeline.asjp import lexstat_cognates, select_mayan  # noqa: E402
+from pipeline.asjp import lexstat_cognates, partial_cognates, select_mayan  # noqa: E402
 from pipeline.cldf import MISSING, CognateMatrix  # noqa: E402
 from pipeline.pmed import match  # noqa: E402
 
@@ -52,7 +55,7 @@ CT = BASE["candidate_calibrations"][0]
 TAXA = {"Yucatecan": ["ITZAJ", "LACANDON", "MAYA_YUCATECA", "MOPAN"],
         "CholanTzeltalan": ["CHOL_TUMBALA", "CHONTAL_TABASCO", "CHORTI", "TZELTAL_BACHAJON", "TZOTZIL_SAN_ANDRES"]}
 MIN_LABELLED = 10
-VARIANTS = ("sub_expert", "sub_lexstat", "full_lexstat", "hybrid")
+VARIANTS = ("sub_expert", "sub_lexstat", "sub_partial", "full_lexstat", "full_partial", "hybrid")
 
 
 def labelled_forms():
@@ -114,6 +117,9 @@ def cmd_prepare(a) -> None:
         hyb[f] = gold[f] if f in gold else (collections.Counter(members[s]).most_common(1)[0][0] if members[s] else s)
     codings["hybrid"] = hyb
     codings["full_lexstat"] = dict(lex)
+    part = partial_cognates(forms, 0.85, method="lexstat")
+    codings["full_partial"] = dict(part)
+    codings["sub_partial"] = {f: part[f] for f in part if f in gold}
     prior = copy.deepcopy(BASE)
     prior["calibrations"] = []
     for c, name in ((YUC, "Yucatecan"), (CT, "CholanTzeltalan")):
@@ -121,6 +127,8 @@ def cmd_prepare(a) -> None:
         c["taxa"] = [t for t in TAXA[name] if t in keep_l]
         prior["calibrations"].append(c)
     for name, cog in codings.items():
+        if a.only and name not in a.only:
+            continue
         cm = matrix(keep_l, forms, concept, cog)
         d = OUT / name
         d.mkdir(parents=True, exist_ok=True)
@@ -156,7 +164,7 @@ def cmd_summarise(a) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("prepare")
+    sub.add_parser("prepare").add_argument("--only", nargs="*")
     p = sub.add_parser("run"); p.add_argument("--jobs", type=int, default=4)
     sub.add_parser("summarise")
     a = ap.parse_args()
