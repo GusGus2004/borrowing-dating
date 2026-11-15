@@ -13,7 +13,7 @@ The full project design is kept privately.
 | 2. Bias curve vs borrowing rate, two contact models | **done** (below), plus 2b: under a realistic calibration design (vague root, recent calibrations) the root bias is 30–50% |
 | 3. Phoneme strings + pair HMM, ROC | **done** (below); 3b/3c: level-3 detector (forms + tree) raises AUC from 0.61–0.67 to 0.77–0.80 with correct cognates; needs 100–200 concepts with automated cognates |
 | 4. Latent-donor correction | **done** (below): masking the true loans removes the bias; masking detector flags barely helps. Latent-donor (level 2) model does not beat level 1 |
-| 5. Mayan application | **runs done** (below). ASJP 40 with LexStat cognates gives an implausibly young root; 5b: PMED with Kaufman's etyma gives c. 2800 BC under the same calibrations, so the young root comes from the ASJP/LexStat data, not the calibrations; why is open (6: in simulation LexStat errors alone bias the root by only −8%). Draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
+| 5. Mayan application | **runs done** (below). ASJP 40 with LexStat cognates gives an implausibly young root; 5b: PMED with Kaufman's etyma gives c. 2800 BC under the same calibrations, and 5c: on the same ASJP words, expert vs LexStat cognate coding alone moves the root by 1,800–4,000 years. LexStat over-splits real Mayan data far more than simulated data (6). Draft calibrations in `infer/beast/m5_mayan_prior.json` are **awaiting review**. Do not quote these dates |
 | 6. Cognate-coding vs borrowing bias (simulation) | **done** (below): LexStat errors alone −8% ± 5%, borrowing −29% |
 
 ## Results so far
@@ -360,7 +360,7 @@ show:
   bounds). The Mayan Highlands and Lowlands are known contact zones. This is
   consistent with, not proof of, borrowing as the cause. **See milestone 5b:**
   with Kaufman's expert etyma the root is c. 2800 BC under the same
-  calibrations; milestone 6 leaves open why.
+  calibrations; 5c shows the difference is cognate coding.
 
 Next: agree the calibrations (including the candidate Cholan–Tzeltalan
 minimum) with the supervisor, and develop a detector that works on real data
@@ -409,7 +409,8 @@ calibration is dropped because PMED lacks Chicomuceltec. Root Uniform(1500,
   It also shows the cost of automated cognates is large on real data, which
   matters for any borrowing correction built on them.
   Milestone 6 finds that LexStat-style errors alone shift simulated roots by
-  only −8%, so the size of this gap is not yet explained.
+  only −8%, but milestone 5c confirms the effect on the real words: the
+  simulated words are too easy for LexStat.
 
 ![](figures/m5b_root_age.png)
 
@@ -450,6 +451,43 @@ calibrations at 8–40% of the root, Normal(true, 20%)); 5M states, ESS > 1400.
   PMED's ascertainment (bounded in 5b, but not removed).
 
 ![](figures/m6_cognate_coding.png)
+
+### Milestone 5c: on real data, cognate coding alone moves the root by millennia
+
+`scripts/m5c_asjp_expert.py`: the ASJP Mayan words recoded with Kaufman's
+etyma where PMED gives an unambiguous label (857 of 1,317 forms; 27
+languages with ≥ 10 labelled forms; Chicomuceltec, Chontal, Mocho' and one
+K'iche' variety dropped). Calibrations as `asjp_yuc_ct` in 5b; 20M states,
+ESS > 3000.
+
+| Run | Forms | Cognate sets | Sets per concept | Proto-Mayan, median | 95% HPD (BP) | loss rate |
+|---|---|---|---|---|---|---|
+| sub_lexstat | 857 labelled | LexStat 0.75 | 4.4 | 1276 BC | 2356–4255 | 1.9e-4 |
+| sub_expert | the same 857 | Kaufman's etyma | 2.6 | 5246 BC | 5262–8998 | 6.2e-5 |
+| full_lexstat | all 1,317 | LexStat 0.75 | 5.8 | 1175 BC | 2501–3953 | 3.0e-4 |
+| hybrid | all 1,317 | etyma where labelled, else the majority etymon of the LexStat set, else the LexStat set | 4.0 | 2976 BC | 3453–6659 | 1.3e-4 |
+
+* **Identical words, identical calibrations, only the cognate coding
+  differs: the root moves by about 4,000 years** (sub_lexstat vs
+  sub_expert), and by 1,800 years on the complete lists (full_lexstat vs
+  hybrid). So the 5b gap is a cognate-coding effect on real data.
+* **Neither subset date is meaningful on its own.** The labelled forms are
+  reflexes of Kaufman's etyma, which enriches them for retentions; with
+  expert coding the root runs into the prior's upper bound (9000 BP). The
+  complete-list hybrid (2976 BC) is close to the PMED fits of 5b (2792 BC).
+* **On real data LexStat over-splits heavily**: 175 sets where Kaufman has
+  103 for the same 857 forms (+70%). In the milestone 6 simulations its set
+  counts matched the truth, which is why simulated coding errors moved the
+  root by only −8%. The simulated words are too easy, and making them
+  realistic (morphology, sound change, synonymy) is the next step for the
+  simulation side.
+* **What counts as a cognate is part of the answer.** Kaufman's etyma are
+  roots: derivatives and compounds of one root share an etymon, whereas
+  LexStat compares whole words. Under the stochastic Dollo model a new
+  derivative of an old root is a replacement in one coding and not in the
+  other, so "correct" coding for dating depends on how lexical replacement
+  is defined. Morpheme-level (partial) cognates sit between the two.
+
 
 ## Quick start
 
