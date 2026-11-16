@@ -1,0 +1,71 @@
+{
+  "_comment": "Milestone 7: IE-CoR, 40 modern Indo-European languages, 170 concepts. Ages in years before AD 2000. STATUS: DRAFT. These clade ages are broad ranges from the historical record, written for a comparison between cognate codings under identical calibrations; they are not Heggarty et al.'s (2023) calibrations (which use ancient tip dates) and must be reviewed before any Indo-European date is quoted.",
+  "root_age": {
+    "dist": "uniform",
+    "lower": 3500.0,
+    "upper": 12000.0,
+    "_why": "Broad: contains both the Steppe (c. 6000 BP) and Anatolian (c. 8000-9500 BP) hypotheses with margin; the lower bound is just above the Indo-Iranian minimum."
+  },
+  "yule_birth_rate": {
+    "dist": "lognormal",
+    "meanlog": -6.9,
+    "sdlog": 1.5,
+    "_why": "As milestone 5."
+  },
+  "loss_rate": {
+    "dist": "lognormal",
+    "meanlog": -9.0,
+    "sdlog": 1.0,
+    "_why": "As milestone 5: basic-vocabulary replacement of roughly 10-30% per millennium."
+  },
+  "calibrations": [
+    {
+      "name": "Romance",
+      "taxa": ["Spanish", "Portuguese", "Catalan", "French", "Italian", "Romanian", "SardinianLogudoro"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 1400.0, "upper": 2100.0},
+      "source": "Latin still a single literary and spoken standard in the late Republic; Romance differentiation from the late Empire (Dacia abandoned AD 271) to the earliest Romance texts (9th century). DRAFT."
+    },
+    {
+      "name": "NorthGermanic",
+      "taxa": ["Danish", "NorwegianBokmal", "Swedish", "Icelandic"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 900.0, "upper": 1400.0},
+      "source": "Old Norse largely uniform in the Viking Age; Iceland settled c. AD 870; East/West Norse distinct by c. AD 1000-1100. DRAFT."
+    },
+    {
+      "name": "Slavic",
+      "taxa": ["Russian", "Ukrainian", "Polish", "Czech", "Bulgarian", "SerboCroatian", "Slovene"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 1200.0, "upper": 1800.0},
+      "source": "Late Common Slavic dialect continuum until c. AD 600-800; Old Church Slavonic (9th century) still close to the common language. DRAFT."
+    },
+    {
+      "name": "Baltic",
+      "taxa": ["Lithuanian", "Latvian"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 1200.0, "upper": 2200.0},
+      "source": "East Baltic split conventionally placed in the first millennium AD. DRAFT."
+    },
+    {
+      "name": "IndoIranian",
+      "taxa": ["Hindi", "Bengali", "Marathi", "Nepali", "Kashmiri", "Palula", "Pashto", "OsseticIron", "Bakhtiari", "Kamviri"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 3400.0, "upper": 6000.0},
+      "source": "Distinct Indo-Aryan (Mitanni names, c. 1400 BC; early Vedic) and Iranian (Old Avestan) by the mid-second millennium BC. DRAFT."
+    },
+    {
+      "name": "Celtic",
+      "taxa": ["GaelicIrish", "WelshNorth", "BretonTreger"],
+      "monophyletic": true,
+      "dist": {"dist": "uniform", "lower": 1700.0, "upper": 3500.0},
+      "source": "Primitive Irish (Ogham, from c. 4th century AD) already distinct from British. DRAFT."
+    }
+  ],
+  "mcmc": {
+    "chain_length": 10000000,
+    "log_every": 5000,
+    "tree_log_every": 20000,
+    "burnin_frac": 0.1
+  }
+}
