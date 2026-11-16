@@ -69,6 +69,21 @@ class PhonologyParams:
     stable_weight: float = 1.0
     suffix_rate: float = 0.0       # suffix gains per concept per lineage per year
     suffixes: tuple = ("il", "al", "el", "ax")
+    # Zipf-like skew of segment frequencies in new protoforms: weight of the
+    # r-th segment (in INVENTORY order) is 1 / r**segment_skew. 0 = uniform.
+    # Real phonotactics make unrelated words share common segments.
+    segment_skew: float = 0.0
+    # Probability that a newly born cognate class is built from an existing
+    # word of the lineage (same concept if it has one, else any concept), by
+    # compounding with a new one-syllable root or adding a suffix, instead of
+    # being a fresh root. The new class is a different cognate set, but it
+    # shares material with an old one, as Mayan compounds and derivations do.
+    derived_prob: float = 0.0
+    # Fraction of suffixation events (``suffix_rate``) that instead add a
+    # compound element (a fresh CVC root, before or after). Cognacy is
+    # unchanged, as when an etymological dictionary files "green tree" under
+    # the root for "tree"; whole-word methods then tend to split it off.
+    compound_share: float = 0.0
 
     def __post_init__(self) -> None:
         if self.change_rate < 0 or self.sporadic_rate < 0:
@@ -107,13 +122,35 @@ class SoundChange:
         return f"{self.target} > {self.output or '∅'}{ctx}"
 
 
+def _skewed(seq: str, skew: float) -> np.ndarray:
+    w = 1.0 / np.arange(1, len(seq) + 1) ** skew
+    return w / w.sum()
+
+
 def random_protoform(p: PhonologyParams, rng: np.random.Generator) -> str:
     n = int(rng.integers(p.min_syllables, p.max_syllables + 1))
+    if p.segment_skew > 0:  # separate branch so default runs keep their random stream
+        wc, wv = _skewed(CONSONANTS, p.segment_skew), _skewed(VOWELS, p.segment_skew)
+        s = "".join(CONSONANTS[rng.choice(len(CONSONANTS), p=wc)] + VOWELS[rng.choice(len(VOWELS), p=wv)]
+                    for _ in range(n))
+        if rng.random() < p.p_final_consonant:
+            s += CONSONANTS[rng.choice(len(CONSONANTS), p=wc)]
+        return s
     s = "".join(CONSONANTS[rng.integers(len(CONSONANTS))] + VOWELS[rng.integers(len(VOWELS))]
                 for _ in range(n))
     if rng.random() < p.p_final_consonant:
         s += CONSONANTS[rng.integers(len(CONSONANTS))]
     return s
+
+
+def derived_form(base: str, p: PhonologyParams, rng: np.random.Generator) -> str:
+    """A new word built on ``base``: a compound with a fresh CVC root (either order) or base + suffix."""
+    k = int(rng.integers(3))
+    if k == 2:
+        return base + p.suffixes[int(rng.integers(len(p.suffixes)))]
+    root = random_protoform(PhonologyParams(min_syllables=1, max_syllables=1, p_final_consonant=1.0,
+                                            segment_skew=p.segment_skew), rng)
+    return base + root if k == 0 else root + base
 
 
 def draw_sound_change(forms: list[str], rng: np.random.Generator,
@@ -198,7 +235,13 @@ class LineagePhonology:
                 self.rules.append((age, str(rule)))
             elif kind == "suffix":
                 k = keys[int(rng.integers(len(keys)))]
-                if not any(forms[k].endswith(x) for x in self.p.suffixes):
+                if self.p.compound_share > 0 and rng.random() < self.p.compound_share:
+                    if len(forms[k]) <= 5:  # at most one compound element
+                        root = random_protoform(PhonologyParams(min_syllables=1, max_syllables=1,
+                                                                p_final_consonant=1.0,
+                                                                segment_skew=self.p.segment_skew), rng)
+                        forms[k] = forms[k] + root if rng.random() < 0.5 else root + forms[k]
+                elif not any(forms[k].endswith(x) for x in self.p.suffixes):
                     forms[k] += self.p.suffixes[int(rng.integers(len(self.p.suffixes)))]
             else:
                 k = keys[int(rng.integers(len(keys)))]

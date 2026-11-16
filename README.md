@@ -452,6 +452,53 @@ calibrations at 8–40% of the root, Normal(true, 20%)); 5M states, ESS > 1400.
 
 ![](figures/m6_cognate_coding.png)
 
+### Simulation realism (in progress): review, first calibration, and a failed design
+
+`scripts/sim_realism.py` compares simulated words with the real ASJP Mayan
+words (gold: Kaufman's etyma) on the statistics that drive cognate coding:
+
+| | Real | M5/M6 simulation | MAYAN_V1 |
+|---|---|---|---|
+| gold sets per concept | 2.6 (retention-enriched subset) | 15.7 | 3.3 |
+| forms per language and concept | 1.08 | 1.60 | 1.00 |
+| NED of true cognates (all / across the root split) | 0.49 / 0.64 | 0.31 / 0.52 | 0.51 / 0.63 |
+| LexStat sets / gold sets | **1.70** | 0.87 | 1.38 |
+| LexStat B-cubed F | 0.80 | 0.83 | 0.79 |
+| pairwise recall (all / across root) | 0.74 / 0.73 | 0.69 / 0.43 | 0.60 / 0.46 |
+| non-cognate pairs merged | 0.29 | 0.04 | 0.09 |
+
+The main problem was the lexicon, not the phonology: far too much turnover
+and polymorphism, so cognate sets were tiny and there was little to split.
+New `PhonologyParams` options (all off by default; earlier results reproduce
+exactly; tests in `tests/test_phonology.py`): `segment_skew` (Zipf-like
+segment frequencies in new roots), `derived_prob` (new classes built on old
+words by compounding or suffixation), `compound_share` (compounding that
+keeps cognacy, alongside `suffix_rate`). `sim_realism.py` can also simulate
+on the PMED MCC tree (`tree: "pmed"`), fix the loss rate, and keep one form
+per language and concept (`one_per_cell`). MAYAN_V1 combines these.
+
+**Milestone 6r failed as designed** (`scripts/m6r_realistic.py`, 10
+replicates on the PMED tree, real calibration nodes at their true ages,
+real-analysis priors):
+
+| Cognates | Borrowing | Root bias (± se) | Coverage | Loss-rate bias |
+|---|---|---|---|---|
+| true | none | **−41.9% ± 5.1** | 0.10 | +304% |
+| LexStat | none | −5.9% ± 7.5 | 0.90 | +346% |
+| true | κ = 1 (9% borrowed) | −48.4% ± 1.9 | 0.00 | +336% |
+| LexStat | κ = 1 | −23.2% ± 4.0 | 0.70 | +372% |
+
+The true-cognate baseline is badly biased, so nothing here can be
+interpreted. Cause: `one_per_cell`. Under stochastic Dollo with birth =
+loss, a language has several classes for a concept about a quarter of the
+time; keeping one at random makes the discarded ones look lost on terminal
+branches, inflating the loss rate about fourfold. Without `one_per_cell`
+LexStat no longer over-splits (sets ratio 1.04), so most of MAYAN_V1's
+apparent realism came from this misspecification. Fix (next): a lexical
+process in which each language has about one word per concept and words are
+*replaced* (with occasional synonymy), then re-check that true cognates give
+unbiased dates before repeating 6r.
+
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
 `scripts/m5c_asjp_expert.py`: the ASJP Mayan words recoded with Kaufman's

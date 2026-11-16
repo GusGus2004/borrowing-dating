@@ -124,3 +124,33 @@ def test_stable_segments_rarely_change():
     # default (no stable segments) is unchanged behaviour: any segment can be targeted
     targets = {draw_sound_change(forms, rng).target for _ in range(400)}
     assert {"h", "a"} <= targets
+
+
+def test_segment_skew_favours_early_segments():
+    rng = np.random.default_rng(5)
+    p = PhonologyParams(min_syllables=1, max_syllables=1, p_final_consonant=1.0, segment_skew=1.5)
+    text = "".join(random_protoform(p, rng) for _ in range(2000))
+    from sim.phonology import CONSONANTS
+    assert text.count(CONSONANTS[0]) > 5 * text.count(CONSONANTS[-1])
+
+
+def test_derived_form_contains_base():
+    from sim.phonology import derived_form
+    rng = np.random.default_rng(6)
+    p = PhonologyParams(segment_skew=1.0)
+    for _ in range(100):
+        f = derived_form("kab", p, rng)
+        assert "kab" in f and len(f) > 3
+
+
+def test_new_options_keep_cognate_data_and_default_forms():
+    rng = np.random.default_rng(7)
+    tree = simulate_yule_given_root(6, 2500.0, 6e-4, rng)
+    p = SDolloParams(n_concepts=60, birth_rate=MU, loss_rate=MU)
+    b = BorrowingParams(3e-4)
+    r0 = simulate_with_borrowing(tree, p, b, seed=8, phonology=PhonologyParams())
+    r1 = simulate_with_borrowing(tree, p, b, seed=8, phonology=PhonologyParams(
+        segment_skew=1.0, derived_prob=0.5, suffix_rate=1e-4, compound_share=0.5))
+    assert np.array_equal(r0.presence, r1.presence)  # word shapes never touch the cognate process
+    r2 = simulate_with_borrowing(tree, p, b, seed=8, phonology=PhonologyParams())
+    assert (r0.forms == r2.forms).all()  # defaults reproducible

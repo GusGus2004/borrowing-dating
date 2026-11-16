@@ -35,7 +35,7 @@ from typing import Optional
 
 import numpy as np
 
-from .phonology import LineagePhonology, PhonologyParams, random_protoform
+from .phonology import LineagePhonology, PhonologyParams, derived_form, random_protoform
 from .sdollo import SDolloParams, SDolloResult, draw_branch_rates, draw_concept_rates
 from .tree import Node, Tree
 
@@ -189,7 +189,13 @@ def simulate_with_borrowing(tree: Tree, params: SDolloParams, borrowing: Borrowi
                 state[names[l]][0][c].append(cid)
                 counts[l, c] += 1
                 if phonology is not None:
-                    forms[names[l]][cid] = random_protoform(phonology, phon_rng)  # type: ignore[index, arg-type]
+                    fl = forms[names[l]]  # type: ignore[index]
+                    if phonology.derived_prob > 0 and phon_rng.random() < phonology.derived_prob and len(fl) > 1:
+                        same = [x for x in state[names[l]][0][c] if x != cid and x in fl]
+                        pool = same or [x for x in fl if x != cid]
+                        fl[cid] = derived_form(fl[pool[int(phon_rng.integers(len(pool)))]], phonology, phon_rng)
+                    else:
+                        fl[cid] = random_protoform(phonology, phon_rng)
                 continue
             u -= birth_rate_l.sum()
             if u < loss_lc.sum():
