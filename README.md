@@ -580,8 +580,38 @@ younger, as on real data. Borrowing and LexStat errors add up (−21%). The
 simulated effect is still much smaller than the real one (5c: thousands of
 years, i.e. roughly −40% or more relative to the expert-coded root), so tip
 errors are a sufficient direction-level explanation but not a quantitative
-one. Next: a direct test on true cognates (split off single languages vs
-subgroup-sized pieces at matched set counts) instead of more tuning.
+one.
+
+### Milestone 6s: single-language splits are what drive the young root
+
+A direct test with no word simulation or LexStat
+(`scripts/m6s_split_shape_dating.py prepare|run|summarise`,
+`data/derived/m6s`, `figures/m6s_split_shape.png`). It uses the true cognate
+sets of the same 10 histories (V2/V3, no borrowing). Each replicate gets
+exactly as many extra sets as LexStat produced on it in V3 (165 to 250 sets
+on average), added in one of two ways. *tip*: a random form whose set spans
+2+ languages becomes a singleton. *clade*: the members of a 3+-language set
+that lie under a random internal node of the true tree (2+ languages, not
+all) move to a new set. Same priors, calibrations and seeds as 6r.
+
+| Cognates | Sets | Root bias (± se) | Δ vs true (paired) | Coverage | Loss-rate bias |
+|---|---|---|---|---|---|
+| true | 165 | −0.8% ± 5.2 | | 1.00 | +7% |
+| split off single languages | 250 | **−30.7% ± 4.3** | −29.8% ± 3.6 | 0.30 | +92% |
+| split off subgroups | 250 | −13.1% ± 3.8 | −12.3% ± 3.5 | 0.90 | +92% |
+| LexStat on V3 words | 250 | −12.8% ± 3.9 | −12.0% ± 4.1 | 0.90 | +254% |
+
+With the number of errors fixed, splitting off single languages biases the
+root young about 2.5 times as much as splitting off subgroups, and pushes
+coverage to 0.30. This supports the explanation for real Mayan data, where
+LexStat's splits are mostly single-language (5c, 6r V2). It also corrects
+the 6r V2 account. Random subgroup splits make the root *younger*, not
+older, so they do not explain V2's +17%. V2 and V3 LexStat also have the
+same precision and recall (P 0.89, R 0.68 vs 0.69), so the explanation is
+not extra merging either. V2's errors fall disproportionately across the
+root split (deep recall 0.46 vs 0.59 overall), which random clade splits do
+not reproduce. Splits concentrated at the root are an untested candidate.
+The V2 sign is left open.
 
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
