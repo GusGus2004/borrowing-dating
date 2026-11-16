@@ -499,6 +499,48 @@ process in which each language has about one word per concept and words are
 *replaced* (with occasional synonymy), then re-check that true cognates give
 unbiased dates before repeating 6r.
 
+**Milestone 6r, design V2: a valid baseline, but the LexStat bias has the
+wrong sign.** MAYAN_V2 replaces the lexical process (`process:
+"replacement"`: one word per concept, a new word replaces the old one, 10%
+of replacements keep the old word as a short-lived synonym) and adds
+per-form transcription noise at the tips (`tip_noise: 0.3`); no
+subsampling. Its statistics: LexStat sets / gold 1.46, F 0.76, NED
+0.56 / 0.65, non-cognates merged 0.15, recall 0.59 / 0.46 (real 0.74 /
+0.73). `python scripts/m6r_realistic.py --design v2 prepare|run|summarise`;
+10 replicates, 5M states, `data/derived/m6r2`, `figures/m6r2_realistic.png`.
+
+| Cognates | Borrowing | Root bias (± se) | Δ vs true, no borrowing (paired) | Coverage | Loss-rate bias |
+|---|---|---|---|---|---|
+| true | none | **−0.8% ± 5.2** | | 1.00 | +7% |
+| LexStat (F 0.77, sets × 1.35) | none | +15.8% ± 7.2 | +16.7% ± 6.6 | 0.90 | +159% |
+| true | κ = 1 (4.6% borrowed) | −14.0% ± 4.8 | −13.1% ± 7.6 | 0.90 | +62% |
+| LexStat | κ = 1 | +6.1% ± 7.2 | +6.9% ± 9.8 | 0.80 | +187% |
+
+The baseline is now unbiased, so the replacement process is compatible with
+the dating model. Borrowing makes the root younger, as in milestones 2 and 6.
+LexStat over-splitting in V2 makes the root *older* (+17%), whereas on the
+real words the same over-splitting makes it ~4,000 years *younger* (5c).
+The two effects partly cancel.
+
+Why the signs differ (`scripts/m6r_split_shape.py`, real ASJP/Kaufman vs
+three V2 replicates): the *shape* of the splits differs. On real data
+LexStat mostly peels single languages off a set: singleton sets go from 22%
+(gold) to 47% (LexStat), and 38% of the fragments of large sets are
+singletons. In V2 the gold data already have ~42% singletons (too many
+derived and new words near the tips), LexStat leaves that share unchanged
+(~40%), and only ~22% of fragments are singletons; V2 cuts sets into
+subgroup-sized pieces instead. Singleton fragments look like many recent
+innovations, which pulls the root down; this matches M5b, where coding
+missing PMED cells as singletons moved Proto-Mayan from 2792 BC to 1769 BC.
+Subgroup-sized fragments instead look like extra deep births and losses
+(loss rate +159%), which stretch the tree.
+
+So V2 does not yet reproduce the error that matters on real data, and its
++17% should not be read as the real-world LexStat effect. Next (V3): fewer
+gold singletons (lower `derived_prob` / innovation near the tips) and tip
+noise that more often makes a single language's form unrecognisable, then
+check the singleton statistics against real data before refitting.
+
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
 `scripts/m5c_asjp_expert.py`: the ASJP Mayan words recoded with Kaufman's
