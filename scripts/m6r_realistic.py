@@ -19,8 +19,8 @@ LogNormal(-9, 1), strict clock), with the real calibration nodes set at their
 true ages in the simulation tree: Yucatecan and Cholan-Tzeltalan crowns,
 each Normal(true age, 20%). A concept with no form in a language is missing.
 
-Designs: --design v1 (MAYAN_V1, data/derived/m6r; fails, see README) or v2 (default,
-MAYAN_V2, data/derived/m6r2).
+Designs: --design v1 (MAYAN_V1, data/derived/m6r; fails, see README), v2 (default,
+MAYAN_V2, data/derived/m6r2) or v3 (MAYAN_V3, data/derived/m6r3; tip-level errors).
 
 Subcommands: prepare [--reps N] | run [--jobs N] | summarise
 """
@@ -45,9 +45,10 @@ from analysis.mcmc import ess, hpd, read_log  # noqa: E402
 from infer.beastrun import run_all  # noqa: E402
 from infer.beastxml import load_prior, render_xml  # noqa: E402
 from m5c_asjp_expert import matrix  # noqa: E402
-from sim_realism import MAYAN_V1, MAYAN_V2, bcubed, simulate_forms  # noqa: E402
+from sim_realism import MAYAN_V1, MAYAN_V2, MAYAN_V3, bcubed, simulate_forms  # noqa: E402
 
-DESIGNS = {"v1": (MAYAN_V1, ROOT / "data/derived/m6r"), "v2": (MAYAN_V2, ROOT / "data/derived/m6r2")}
+DESIGNS = {"v1": (MAYAN_V1, ROOT / "data/derived/m6r"), "v2": (MAYAN_V2, ROOT / "data/derived/m6r2"),
+           "v3": (MAYAN_V3, ROOT / "data/derived/m6r3")}
 CONFIG, OUT = DESIGNS["v2"]
 FIG = ROOT / "figures"
 BASE = load_prior(ROOT / "infer/beast/m5_mayan_prior.json")

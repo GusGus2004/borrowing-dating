@@ -134,6 +134,9 @@ MAYAN_V1 = {"tree": "pmed", "one_per_cell": True, "min_syllables": 1, "max_sylla
 MAYAN_V2 = {"tree": "pmed", "min_syllables": 1, "max_syllables": 1, "segment_skew": 1.0, "compound_share": 0.5,
             "derived_prob": 0.3, "change_rate": 1e-3, "process": "replacement", "p_synonym": 0.1, "mu": 6e-5,
             "suffix_rate": 1e-4, "sporadic_rate": 1e-4, "tip_noise": 0.3}
+# V2 splits sets into subgroup-sized pieces (lineage-level sporadic change); real LexStat errors mostly peel single
+# languages off (singleton fragments, recall equal at all depths). V3 moves divergence from the lineages to the tips.
+MAYAN_V3 = {**MAYAN_V2, "sporadic_rate": 3e-5, "suffix_rate": 5e-5, "tip_noise": 0.4, "tip_compound": 0.15}
 
 
 def simulate_forms(cfg: dict, seed: int):

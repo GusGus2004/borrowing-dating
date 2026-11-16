@@ -526,20 +526,62 @@ Why the signs differ (`scripts/m6r_split_shape.py`, real ASJP/Kaufman vs
 three V2 replicates): the *shape* of the splits differs. On real data
 LexStat mostly peels single languages off a set: singleton sets go from 22%
 (gold) to 47% (LexStat), and 38% of the fragments of large sets are
-singletons. In V2 the gold data already have ~42% singletons (too many
-derived and new words near the tips), LexStat leaves that share unchanged
-(~40%), and only ~22% of fragments are singletons; V2 cuts sets into
-subgroup-sized pieces instead. Singleton fragments look like many recent
+singletons. In V2 the gold data already have ~42% singletons (largely
+replacements on terminal branches; the real 22% is understated, since
+Kaufman labels only forms with an etymology, about two thirds of them),
+LexStat leaves that share unchanged (~40%), and only ~22% of fragments are
+singletons; V2 cuts sets into subgroup-sized pieces instead. Real recall is
+the same across the root split as overall (0.73 vs 0.74), so real errors are
+idiosyncratic to single languages, while V2's come from divergence along
+lineages and so fall on deep pairs (0.46 vs 0.59). Singleton fragments look like many recent
 innovations, which pulls the root down; this matches M5b, where coding
 missing PMED cells as singletons moved Proto-Mayan from 2792 BC to 1769 BC.
 Subgroup-sized fragments instead look like extra deep births and losses
 (loss rate +159%), which stretch the tree.
 
 So V2 does not yet reproduce the error that matters on real data, and its
-+17% should not be read as the real-world LexStat effect. Next (V3): fewer
-gold singletons (lower `derived_prob` / innovation near the tips) and tip
-noise that more often makes a single language's form unrecognisable, then
-check the singleton statistics against real data before refitting.
++17% should not be read as the real-world LexStat effect.
+
+**Design V3: errors at the tips reverse the LexStat bias.** Tuning (3 replicates per
+setting; statistics from `sim_realism.stats` plus the split shape) showed
+that the tip noise, not the regular sound change, causes most of V2's
+divergence; without it, deep recall is close to real (0.67 to 0.77). No
+setting matches every statistic: less lineage change raises recall but
+removes the splits, and any tip-level error also costs deep recall. MAYAN_V3
+moves divergence from lineages to tips (lineage sporadic change 1e-4 to
+3e-5, suffixation 5e-5, tip noise 0.4, elicited tip compounds 0.15):
+
+| | Real | V2 | V3 |
+|---|---|---|---|
+| LexStat sets / gold | 1.70 | 1.45 | 1.58 |
+| B-cubed F | 0.80 | 0.76 | 0.77 |
+| recall (all / across root) | 0.74 / 0.73 | 0.59 / 0.46 | 0.59 / 0.50 |
+| LexStat singleton sets | 0.47 | 0.41 | 0.47 |
+| singleton share of fragments of sets with 4+ languages | 0.38 | 0.23 | 0.33 |
+| share of languages in the largest fragment | 0.81 | 0.77 | 0.79 |
+
+`python scripts/m6r_realistic.py --design v3 prepare|run|summarise`; 10
+replicates, 5M states, `data/derived/m6r3`, `figures/m6r3_realistic.png`.
+The true-cognate cells are identical to V2: the same seeds give the same
+cognate matrices, and V3 changes only the words.
+
+| Cognates | Borrowing | Root bias (± se) | Δ vs true, no borrowing (paired) | Coverage | Loss-rate bias |
+|---|---|---|---|---|---|
+| true | none | −0.8% ± 5.2 | | 1.00 | +7% |
+| LexStat (F 0.78, sets × 1.52) | none | **−12.8% ± 3.9** | **−12.0% ± 4.1** | 0.90 | +254% |
+| true | κ = 1 (4.6% borrowed) | −14.0% ± 4.8 | −13.1% ± 7.6 | 0.90 | +62% |
+| LexStat | κ = 1 | −21.2% ± 2.9 | −20.4% ± 5.0 | 0.70 | +297% |
+
+With the same true histories, moving the coding errors from lineages (V2)
+to single languages at the tips (V3) turns the LexStat bias from +17% to
+−12%. The direction of the bias depends on the *shape* of the errors, not
+just their number, and errors shaped like the real ones make the root
+younger, as on real data. Borrowing and LexStat errors add up (−21%). The
+simulated effect is still much smaller than the real one (5c: thousands of
+years, i.e. roughly −40% or more relative to the expert-coded root), so tip
+errors are a sufficient direction-level explanation but not a quantitative
+one. Next: a direct test on true cognates (split off single languages vs
+subgroup-sized pieces at matched set counts) instead of more tuning.
 
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 

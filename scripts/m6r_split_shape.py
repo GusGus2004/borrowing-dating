@@ -24,18 +24,23 @@ def shape(ids, gold, auto, lang):
                 auto_singleton=(sz == 1).mean(), gold_singleton=(gsz == 1).mean(),
                 largest_frag_share=np.mean(big), frags_per_big_set=np.mean(nfrag), singleton_frag_share=np.mean(single))
 
-from m5c_asjp_expert import MIN_LABELLED, labelled_forms
-with contextlib.redirect_stderr(io.StringIO()):
-    languages, forms, concept, gold = labelled_forms()
-    n = collections.Counter(f["Language_ID"] for f in forms if f["ID"] in gold)
-    forms = [f for f in forms if n[f["Language_ID"]] >= MIN_LABELLED]
-    auto = lexstat_cognates(forms, 0.75)
-ids = [f["ID"] for f in forms if f["ID"] in gold]
-lang = {f["ID"]: f["Language_ID"] for f in forms}
-print("real ", {k: round(float(v), 3) for k, v in shape(ids, gold, auto, lang).items()})
-for seed in (7700, 7710, 7720):
-    forms, gold, tree, mu, bf = simulate_forms({**MAYAN_V2, "kappa": 0.0}, seed)
+def main():
+    from m5c_asjp_expert import MIN_LABELLED, labelled_forms
     with contextlib.redirect_stderr(io.StringIO()):
+        languages, forms, concept, gold = labelled_forms()
+        n = collections.Counter(f["Language_ID"] for f in forms if f["ID"] in gold)
+        forms = [f for f in forms if n[f["Language_ID"]] >= MIN_LABELLED]
         auto = lexstat_cognates(forms, 0.75)
+    ids = [f["ID"] for f in forms if f["ID"] in gold]
     lang = {f["ID"]: f["Language_ID"] for f in forms}
-    print("sim", seed, {k: round(float(v), 3) for k, v in shape([f["ID"] for f in forms], gold, auto, lang).items()})
+    print("real ", {k: round(float(v), 3) for k, v in shape(ids, gold, auto, lang).items()})
+    for seed in (7700, 7710, 7720):
+        forms, gold, tree, mu, bf = simulate_forms({**MAYAN_V2, "kappa": 0.0}, seed)
+        with contextlib.redirect_stderr(io.StringIO()):
+            auto = lexstat_cognates(forms, 0.75)
+        lang = {f["ID"]: f["Language_ID"] for f in forms}
+        print("sim", seed, {k: round(float(v), 3) for k, v in shape([f["ID"] for f in forms], gold, auto, lang).items()})
+
+
+if __name__ == "__main__":
+    main()
