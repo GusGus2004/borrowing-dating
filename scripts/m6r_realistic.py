@@ -19,6 +19,9 @@ LogNormal(-9, 1), strict clock), with the real calibration nodes set at their
 true ages in the simulation tree: Yucatecan and Cholan-Tzeltalan crowns,
 each Normal(true age, 20%). A concept with no form in a language is missing.
 
+Designs: --design v1 (MAYAN_V1, data/derived/m6r; fails, see README) or v2 (default,
+MAYAN_V2, data/derived/m6r2).
+
 Subcommands: prepare [--reps N] | run [--jobs N] | summarise
 """
 
@@ -42,9 +45,10 @@ from analysis.mcmc import ess, hpd, read_log  # noqa: E402
 from infer.beastrun import run_all  # noqa: E402
 from infer.beastxml import load_prior, render_xml  # noqa: E402
 from m5c_asjp_expert import matrix  # noqa: E402
-from sim_realism import MAYAN_V1, bcubed, simulate_forms  # noqa: E402
+from sim_realism import MAYAN_V1, MAYAN_V2, bcubed, simulate_forms  # noqa: E402
 
-OUT = ROOT / "data/derived/m6r"
+DESIGNS = {"v1": (MAYAN_V1, ROOT / "data/derived/m6r"), "v2": (MAYAN_V2, ROOT / "data/derived/m6r2")}
+CONFIG, OUT = DESIGNS["v2"]
 FIG = ROOT / "figures"
 BASE = load_prior(ROOT / "infer/beast/m5_mayan_prior.json")
 CALS = {"Yucatecan": ["YUK", "ITZ", "LAK", "MOP"], "CholanTzeltalan": ["CHL", "CHR", "TZE", "TZO"]}
@@ -68,9 +72,10 @@ def _leaves(n):
 
 
 def prepare_one(args) -> str:
-    kappa, i = args
+    kappa, i, design = args
+    CONFIG, OUT = DESIGNS[design]  # passed explicitly: worker processes do not see main's globals
     from pipeline.asjp import lexstat_cognates
-    forms, gold, tree, mu, bf = simulate_forms({**MAYAN_V1, "kappa": kappa}, 7700 + 10 * i)
+    forms, gold, tree, mu, bf = simulate_forms({**CONFIG, "kappa": kappa}, 7700 + 10 * i)
     with contextlib.redirect_stderr(io.StringIO()):
         lex = lexstat_cognates(forms, 0.75)
     languages = sorted(l.name for l in tree.leaves())
@@ -100,7 +105,7 @@ def cells() -> list[str]:
 
 def cmd_prepare(a) -> None:
     with ProcessPoolExecutor(a.jobs) as pool:
-        for msg in pool.map(prepare_one, [(k, i) for i in range(a.reps) for k in KAPPAS]):
+        for msg in pool.map(prepare_one, [(k, i, a.design) for i in range(a.reps) for k in KAPPAS]):
             print(msg, flush=True)
 
 
@@ -165,18 +170,22 @@ def cmd_summarise(a) -> None:
     ax.set_ylabel("root age relative bias (%), mean ± 2 se")
     ax.set_title("Realistic words on the Mayan tree (29 languages × 40 concepts)")
     fig.tight_layout()
-    fig.savefig(FIG / "m6r_realistic.png", dpi=150)
-    print(f"figure -> {FIG / 'm6r_realistic.png'}")
+    name = "m6r_realistic.png" if OUT.name == "m6r" else f"{OUT.name}_realistic.png"
+    fig.savefig(FIG / name, dpi=150)
+    print(f"figure -> {FIG / name}")
 
 
 def main() -> None:
+    global CONFIG, OUT
     ap = argparse.ArgumentParser()
+    ap.add_argument("--design", choices=list(DESIGNS), default="v2")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("prepare"); p.add_argument("--reps", type=int, default=10)
     p.add_argument("--jobs", type=int, default=6)
     p = sub.add_parser("run"); p.add_argument("--jobs", type=int, default=7)
     sub.add_parser("summarise")
     a = ap.parse_args()
+    CONFIG, OUT = DESIGNS[a.design]
     {"prepare": cmd_prepare, "run": cmd_run, "summarise": cmd_summarise}[a.cmd](a)
 
 

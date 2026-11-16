@@ -19,8 +19,11 @@ Statistics (pairs are within a concept, across languages):
 Extra config keys (not PhonologyParams): ``kappa`` (borrowing rate / loss
 rate), ``tree: "pmed"`` (simulate on the PMED MCC tree of milestone 5b,
 29 languages, instead of drawing Yule trees), ``mu`` (fixed loss rate),
-``one_per_cell`` (keep one randomly chosen form per language and concept,
-as a Swadesh-list elicitation does).
+``one_per_cell`` (keep one randomly chosen form per language and concept;
+biases dating, see README), ``tip_noise`` / ``tip_compound`` (per observed
+form, probability of one sporadic change / of a compound element added at
+elicitation), ``process`` / ``p_synonym`` /
+``synonym_loss_mult`` (lexical process, see ``SDolloParams``).
 
 Usage: python scripts/sim_realism.py [--config '{"change_rate": 0.008}'] [--reps 4] [--real]
 Results are appended to data/derived/sim_realism/results.jsonl.
@@ -126,6 +129,11 @@ def real() -> dict:
 MAYAN_V1 = {"tree": "pmed", "one_per_cell": True, "min_syllables": 1, "max_syllables": 1, "segment_skew": 1.0,
             "suffix_rate": 1e-4, "compound_share": 0.5, "mu": 6e-5, "derived_prob": 0.3, "change_rate": 1e-3,
             "sporadic_rate": 1e-4}  # first calibration against the real ASJP/Kaufman statistics
+# V1 biases dating through one_per_cell (see README). V2: replacement lexicon (about one word per
+# concept, 10% synonymy) plus per-form transcription noise at the tips; no subsampling.
+MAYAN_V2 = {"tree": "pmed", "min_syllables": 1, "max_syllables": 1, "segment_skew": 1.0, "compound_share": 0.5,
+            "derived_prob": 0.3, "change_rate": 1e-3, "process": "replacement", "p_synonym": 0.1, "mu": 6e-5,
+            "suffix_rate": 1e-4, "sporadic_rate": 1e-4, "tip_noise": 0.3}
 
 
 def simulate_forms(cfg: dict, seed: int):
@@ -134,6 +142,8 @@ def simulate_forms(cfg: dict, seed: int):
     cfg = dict(cfg)
     kappa = cfg.pop("kappa", 0.0)
     tree_src, mu_fix, one = cfg.pop("tree", None), cfg.pop("mu", None), cfg.pop("one_per_cell", False)
+    lex = {k: cfg.pop(k) for k in ("process", "p_synonym", "synonym_loss_mult") if k in cfg}
+    tip_noise, tip_compound = cfg.pop("tip_noise", 0.0), cfg.pop("tip_compound", 0.0)
     prior = copy.deepcopy(load_prior(ROOT / "infer/beast/m1_strict_prior.json"))
     prior["n_tips"], prior["n_concepts"] = 31, 40
     t = draw_truth(prior, np.random.default_rng(seed))
@@ -141,8 +151,8 @@ def simulate_forms(cfg: dict, seed: int):
         from sim.tree import Tree
         t["tree"] = Tree.from_newick((ROOT / "data/derived/m5b/mcc/pmed_yuc_ct.nwk").read_text())
     mu = mu_fix if mu_fix is not None else t["loss_rate"]
-    res = simulate_with_borrowing(t["tree"], SDolloParams(40, mu, mu), BorrowingParams(kappa * mu), seed=seed + 1,
-                                  phonology=PhonologyParams(**{**BASE_PHON, **cfg}))
+    res = simulate_with_borrowing(t["tree"], SDolloParams(40, mu, mu, **lex), BorrowingParams(kappa * mu),
+                                  seed=seed + 1, phonology=PhonologyParams(**{**BASE_PHON, **cfg}))
     obs = res.observed()
     keep = res.presence.any(axis=0)
     B = res.extra["borrowed"][:, keep] if "borrowed" in res.extra else np.zeros_like(obs.presence, dtype=bool)
@@ -155,6 +165,19 @@ def simulate_forms(cfg: dict, seed: int):
                           "concept": str(obs.class_concept[j]), "Form": w, "Segments": " ".join(w), "seg": list(w),
                           "borrowed": bool(B[r, j])})
             gold[fid] = str(j)
+    if tip_noise > 0 or tip_compound > 0:  # observation noise: transcription, elicited compounds
+        from sim.phonology import random_protoform, sporadic_change
+        nrng = np.random.default_rng(seed + 3)
+        pp = PhonologyParams(min_syllables=1, max_syllables=1, p_final_consonant=1.0,
+                             segment_skew=cfg.get("segment_skew", 0.0))
+        for f in forms:
+            w = f["Form"]
+            if nrng.random() < tip_noise:
+                w = sporadic_change(w, nrng)
+            if nrng.random() < tip_compound:
+                r = random_protoform(pp, nrng)
+                w = w + r if nrng.random() < 0.5 else r + w
+            f["Form"], f["Segments"], f["seg"] = w, " ".join(w), list(w)
     if one:
         rng = np.random.default_rng(seed + 2)
         cell = collections.defaultdict(list)

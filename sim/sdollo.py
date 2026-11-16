@@ -47,6 +47,16 @@ class SDolloParams:
     gamma_shape: Optional[float] = None  # alpha; None = no across-concept variation
     gamma_categories: int = 4     # discrete-gamma categories; 0 = continuous gamma
     clock_sd: float = 0.0         # sd of log branch rate; 0 = strict clock
+    # Lexical process (borrowing simulator only). "birth_death": classes are
+    # gained at birth_rate and lost at loss_rate independently (stochastic
+    # Dollo; Poisson number of synonyms). "replacement": every lineage starts
+    # with one class per concept; at loss_rate per concept a new class
+    # replaces the current one(s), or with probability p_synonym is added as
+    # a synonym; synonyms are lost at synonym_loss_mult x loss_rate, never
+    # the last class of a concept. birth_rate is then unused.
+    process: str = "birth_death"
+    p_synonym: float = 0.0
+    synonym_loss_mult: float = 3.0
 
     def __post_init__(self) -> None:
         if self.n_concepts < 1:
@@ -59,6 +69,10 @@ class SDolloParams:
             raise ValueError("gamma_categories must be >= 0")
         if self.clock_sd < 0:
             raise ValueError("clock_sd must be >= 0")
+        if self.process not in ("birth_death", "replacement"):
+            raise ValueError("process must be 'birth_death' or 'replacement'")
+        if not 0 <= self.p_synonym < 1:
+            raise ValueError("p_synonym must be in [0, 1)")
 
     @property
     def stationary_mean(self) -> float:

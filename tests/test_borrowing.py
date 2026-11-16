@@ -144,3 +144,24 @@ def test_params_validation():
         BorrowingParams(contact="gravity")
     with pytest.raises(ValueError):
         BorrowingParams(mode="swap")
+
+
+def test_replacement_process_keeps_one_word_per_concept():
+    from sim.borrowing import BorrowingParams, simulate_with_borrowing
+    from sim.sdollo import SDolloParams
+    from sim.tree import simulate_yule_given_root
+    import numpy as np
+    rng = np.random.default_rng(11)
+    tree = simulate_yule_given_root(8, 3000.0, 6e-4, rng)
+    p = SDolloParams(n_concepts=50, birth_rate=1e-4, loss_rate=2e-4, process="replacement")
+    r = simulate_with_borrowing(tree, p, BorrowingParams(1e-4), seed=3)
+    per_cell = np.zeros((len(r.tree.leaves()), 50), dtype=int)
+    for j, c in enumerate(r.class_concept):
+        per_cell[:, c] += r.presence[:, j]
+    assert (per_cell == 1).all()  # no synonyms, every concept present
+    p2 = SDolloParams(n_concepts=50, birth_rate=1e-4, loss_rate=2e-4, process="replacement", p_synonym=0.3)
+    r2 = simulate_with_borrowing(tree, p2, BorrowingParams(0.0), seed=3)
+    cells = np.zeros((len(r2.tree.leaves()), 50), dtype=int)
+    for j, c in enumerate(r2.class_concept):
+        cells[:, c] += r2.presence[:, j]
+    assert (cells >= 1).all() and 1.0 < cells.mean() < 1.5

@@ -130,8 +130,11 @@ def simulate_with_borrowing(tree: Tree, params: SDolloParams, borrowing: Borrowi
 
     # lineage state: per concept a list of class ids; plus set of borrowed ids
     root = tree.root
+    replacement = params.process == "replacement"
+    if replacement:
+        lam = mu  # replacement events per concept per lineage
     root_state = [[new_class(c, root.name, root.age) for _ in range(k)]  # type: ignore[arg-type]
-                  for c, k in enumerate(rng.poisson(lam / mu, size=C))]
+                  for c, k in enumerate(np.ones(C, dtype=int) if replacement else rng.poisson(lam / mu, size=C))]
     root_forms = ({cid: random_protoform(phonology, phon_rng) for lst in root_state for cid in lst}
                   if phonology is not None else {})
     State = tuple[list[list[int]], set[int]]
@@ -172,7 +175,11 @@ def simulate_with_borrowing(tree: Tree, params: SDolloParams, borrowing: Borrowi
         borrow_rate_total = beta * w_borrow.sum() * (L if L > 1 else 0)
 
         while True:
-            loss_lc = mu * rho[:, None] * concept_rates[None, :] * counts
+            if replacement:  # only synonyms are lost; never a concept's last class
+                loss_lc = (mu * params.synonym_loss_mult * rho[:, None] * concept_rates[None, :]
+                           * np.maximum(counts - 1, 0))
+            else:
+                loss_lc = mu * rho[:, None] * concept_rates[None, :] * counts
             total = birth_rate_l.sum() + loss_lc.sum() + borrow_rate_total
             dt = rng.exponential(1.0 / total) if total > 0 else np.inf
             if t - dt <= t_end:
@@ -196,6 +203,14 @@ def simulate_with_borrowing(tree: Tree, params: SDolloParams, borrowing: Borrowi
                         fl[cid] = derived_form(fl[pool[int(phon_rng.integers(len(pool)))]], phonology, phon_rng)
                     else:
                         fl[cid] = random_protoform(phonology, phon_rng)
+                if replacement and not (params.p_synonym > 0 and rng.random() < params.p_synonym):
+                    lst = state[names[l]][0][c]
+                    for x in [x for x in lst if x != cid]:
+                        lst.remove(x)
+                        state[names[l]][1].discard(x)
+                        if phonology is not None:
+                            del forms[names[l]][x]  # type: ignore[index]
+                    counts[l, c] = len(lst)
                 continue
             u -= birth_rate_l.sum()
             if u < loss_lc.sum():
