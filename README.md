@@ -536,8 +536,8 @@ idiosyncratic to single languages, while V2's come from divergence along
 lineages and so fall on deep pairs (0.46 vs 0.59). Singleton fragments look like many recent
 innovations, which pulls the root down; this matches M5b, where coding
 missing PMED cells as singletons moved Proto-Mayan from 2792 BC to 1769 BC.
-Subgroup-sized fragments instead look like extra deep births and losses
-(loss rate +159%), which stretch the tree.
+(The guess that subgroup-sized fragments stretch the tree was wrong: random
+subgroup splits make it younger, see 6s. V2's sign is unexplained.)
 
 So V2 does not yet reproduce the error that matters on real data, and its
 +17% should not be read as the real-world LexStat effect.
