@@ -627,7 +627,7 @@ On IE, LexStat 0.75 **over-merges**: 1,829 sets against 2,509 expert sets,
 B-cubed P 0.71, R 0.81, F 0.75. This is the opposite of Mayan, where it
 over-split.
 
-Results at 10M states (root ESS 1,491 to 1,801; the loans-removed run at 5.2M states, ESS 932):
+Results at 10M states (root ESS 1,491 to 1,801; loans removed 1,732):
 
 | Coding | Sets | Singleton share | Root, median BP (95% HPD) | Loss rate |
 |---|---|---|---|---|
@@ -635,7 +635,7 @@ Results at 10M states (root ESS 1,491 to 1,801; the loans-removed run at 5.2M st
 | expert + only LexStat's splits | 3,111 | 0.62 | 7671 (7104 to 8224) | 2.4e-4 |
 | expert + only LexStat's merges | 1,243 | 0.30 | **5947** (5039 to 6826) | 2.2e-4 |
 | LexStat | 1,829 | 0.31 | **5364** (4867 to 5898) | 3.3e-4 |
-| expert, forms in IE-CoR loan sets removed | 2,093 | 0.52 | 8292 (7438 to 9055) | 1.5e-4 |
+| expert, forms in IE-CoR loan sets removed | 2,093 | 0.52 | 8276 (7435 to 9045) | 1.5e-4 |
 
 - Automated coding again makes the root about 2,160 years younger on identical
   words, so the headline effect replicates in a second family. The expert root
@@ -653,10 +653,36 @@ Results at 10M states (root ESS 1,491 to 1,801; the loans-removed run at 5.2M st
   branches (IE), which act like borrowing. Subgroup-sized splits fall in
   between (6s).
 - Removing the expert-identified loans makes the root *older*, by about
-  760 years, with overlapping intervals. This is the direction borrowing predicts (milestones 2 and 6),
+  750 years, with overlapping intervals. This is the direction borrowing predicts (milestones 2 and 6),
   and the first real-data check of it. Removing whole loan sets also drops
   the donor's inherited forms when the donor is in the sample, so this is a
   rough test.
+
+**Remedy test: the LexStat threshold** (`python scripts/m7_iecor.py thresholds`,
+then `run` and `summarise`; 3M states, root ESS 331 to 521;
+`figures/m7_thresholds.png`):
+
+| Threshold | Sets | Singleton share | P | R | F | Root, median BP (95% HPD) |
+|---|---|---|---|---|---|---|
+| 0.45 | 4,128 | 0.67 | 0.97 | 0.59 | 0.731 | 7332 (6158 to 8660) |
+| 0.55 | 3,441 | 0.57 | 0.93 | 0.65 | 0.766 | 7193 (6348 to 8084) |
+| 0.65 | 2,690 | 0.45 | 0.85 | 0.72 | **0.779** | **5816** (5317 to 6381) |
+| 0.75 | 1,829 | 0.31 | 0.71 | 0.81 | 0.753 | 5364 (4867 to 5898) |
+| expert | 2,509 | 0.56 | | | | 7528 (6985 to 8162) |
+
+- **The best-scoring coding still gives a badly biased date.** Threshold 0.65
+  has the highest F against the experts and the closest set count, yet its
+  root is about 1,700 years too young. Only the high-precision thresholds
+  (0.45 and 0.55, P ≥ 0.93) recover the expert date, even though they
+  over-split heavily and have lower F.
+- So cognate-detection scores are a poor guide to dating accuracy. Rama et
+  al. (2018) made the same point for tree topology. On IE what matters is
+  avoiding false merges. Over-splitting is nearly harmless, as in the
+  split-only run.
+- There is no universal fix. On Mayan, LexStat already over-splits and its
+  splits do the damage (5c), and thresholds 0.65 to 0.85 did not help (5).
+  The safe direction depends on which error a family is prone to. "Tune for
+  precision" works on IE but would make Mayan worse.
 
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
