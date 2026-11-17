@@ -55,7 +55,10 @@ LANGUAGES = [
     "Lithuanian", "Latvian", "Russian", "Ukrainian", "Polish", "Czech", "Bulgarian", "Serbo-Croat", "Slovene",
     "Hindi", "Bengali", "Marathi", "Nepali", "Kashmiri", "Palula", "Pashto", "Ossetic: Iron", "Bakhtiari", "Kamviri",
 ]
-VARIANTS = ("expert", "lexstat", "split_lexstat", "merge_lexstat", "expert_noloans")
+THRESHOLDS = (0.45, 0.55, 0.65)  # remedy test; 0.75 is the main "lexstat" run
+TH_CHAIN = 3_000_000  # main runs reached root ESS ~1500 at 10M; 3M gives ~450
+VARIANTS = ("expert", "lexstat", "split_lexstat", "merge_lexstat", "expert_noloans") + tuple(
+    f"lexstat_t{round(t * 100)}" for t in THRESHOLDS)
 
 
 def load():
@@ -119,6 +122,32 @@ def cmd_prepare(a) -> None:
     (OUT / "coding_stats.json").write_text(json.dumps(stats, indent=2))
 
 
+def cmd_thresholds(a) -> None:
+    """Remedy test: does some LexStat threshold recover the expert date, and is it the best-scoring one?"""
+    from sim_realism import bcubed
+    taxa, forms, concept, expert, _ = load()
+    lang = {f["ID"]: f["Language_ID"] for f in forms}
+    prior = load_prior(PRIOR)
+    prior["mcmc"] = dict(prior["mcmc"], chain_length=TH_CHAIN)
+    stats = json.loads((OUT / "coding_stats.json").read_text())
+    for t in THRESHOLDS:
+        with contextlib.redirect_stderr(io.StringIO()):
+            lex = lexstat_cognates(forms, t)
+        P, R, F = bcubed(expert, lex)
+        name = f"lexstat_t{round(t * 100)}"
+        cm = matrix(taxa, forms, concept, lex)
+        d = OUT / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "beast.xml").write_text(render_xml(cm, prior, stem="beast"))
+        (d / "prior.json").write_text(json.dumps(prior, indent=2))
+        stats[name] = {**shape(lex, lang), "columns": cm.shape[1], "missing": float(np.mean(cm.matrix < 0)),
+                       "threshold": t, "P": P, "R": R, "F": F}
+        print(f"{name}: {cm.shape[1]} sets, singletons {stats[name]['singleton_share']:.2f}; P {P:.3f} R {R:.3f} "
+              f"F {F:.3f}", flush=True)
+    stats["lexstat"].update(threshold=0.75, **stats["lexstat_vs_expert"])
+    (OUT / "coding_stats.json").write_text(json.dumps(stats, indent=2))
+
+
 def cmd_run(a) -> None:
     run_all([OUT / v for v in VARIANTS if (OUT / v).exists()], lambda r: 27182, a.jobs)
 
@@ -150,6 +179,7 @@ def cmd_summarise(a) -> None:
     col = {"expert": "#2a7f62", "expert_noloans": "#2a7f62", "merge_lexstat": "#7fb89f", "split_lexstat": "#e08a8f",
            "lexstat": "#4a7bb7"}
     order = [v for v in ("expert", "expert_noloans", "merge_lexstat", "split_lexstat", "lexstat") if v in rows]
+    lab.update({n: f"LexStat {stats[n]['threshold']}" for n in rows if n.startswith("lexstat_t")})
     fig, ax = plt.subplots(figsize=(7.5, 0.5 * len(order) + 1.4))
     for k, n in enumerate(order):
         t = rows[n]["Tree.height"]
@@ -162,6 +192,26 @@ def cmd_summarise(a) -> None:
     fig.tight_layout()
     fig.savefig(FIG / "m7_iecor.png", dpi=150)
     print(f"figure -> {FIG / 'm7_iecor.png'}")
+    th = sorted((stats[n]["threshold"], n) for n in rows if n.startswith("lexstat") and "threshold" in stats.get(n, {}))
+    if len(th) > 1:
+        fig, ax = plt.subplots(figsize=(6.5, 4))
+        e = rows["expert"]["Tree.height"]
+        ax.axhspan(*e["hpd"], color="#2a7f62", alpha=0.15, label="expert sets, 95% HPD")
+        ax.axhline(e["median"], color="#2a7f62", lw=1)
+        for t, n in th:
+            r = rows[n]["Tree.height"]
+            ax.plot([t, t], r["hpd"], color="#4a7bb7", lw=3)
+            ax.plot(t, r["median"], "o", color="#4a7bb7")
+        ax.set_xlabel("LexStat threshold")
+        ax.set_ylabel("root age, BP (draft calibrations)")
+        ax2 = ax.twinx()
+        ax2.plot([t for t, _ in th], [stats[n]["F"] for _, n in th], "s--", color="#d1495b", label="B-cubed F vs expert")
+        ax2.set_ylabel("B-cubed F vs expert", color="#d1495b")
+        ax.legend(loc="upper left", fontsize=8); ax2.legend(loc="lower right", fontsize=8)
+        ax.set_title("IE-CoR: can a LexStat threshold recover the expert date?")
+        fig.tight_layout()
+        fig.savefig(FIG / "m7_thresholds.png", dpi=150)
+        print(f"figure -> {FIG / 'm7_thresholds.png'}")
 
 
 def main() -> None:
@@ -170,8 +220,9 @@ def main() -> None:
     sub.add_parser("prepare")
     p = sub.add_parser("run"); p.add_argument("--jobs", type=int, default=5)
     sub.add_parser("summarise")
+    sub.add_parser("thresholds")
     a = ap.parse_args()
-    {"prepare": cmd_prepare, "run": cmd_run, "summarise": cmd_summarise}[a.cmd](a)
+    {"prepare": cmd_prepare, "run": cmd_run, "summarise": cmd_summarise, "thresholds": cmd_thresholds}[a.cmd](a)
 
 
 if __name__ == "__main__":
