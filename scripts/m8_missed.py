@@ -1,5 +1,8 @@
+"""Milestone 8: which true cognate pairs the correspondence detector (z >= 2) leaves apart, and why."""
 import sys, collections, json, numpy as np, csv
-sys.path[:0]=["/Users/georgelythgoe/Desktop/cambridge/phd","/Users/georgelythgoe/Desktop/cambridge/phd/scripts"]
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
 from m8_correspondence import detect, family_data, classes
 def main():
     for fam in ("mayan","ie"):
