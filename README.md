@@ -613,7 +613,7 @@ root split (deep recall 0.46 vs 0.59 overall), which random clade splits do
 not reproduce. Splits concentrated at the root are an untested candidate.
 The V2 sign is left open.
 
-### Milestone 7: Indo-European (IE-CoR) replication (provisional, draft calibrations, do not quote)
+### Milestone 7: Indo-European (IE-CoR) replication (draft calibrations, do not quote)
 
 `scripts/m7_iecor.py prepare|run|summarise`; prior `infer/beast/m7_iecor_prior.json`;
 `data/derived/m7`; `figures/m7_iecor.png`. IE-CoR v1.2.1 (lexibank/iecor), with
@@ -627,22 +627,22 @@ On IE, LexStat 0.75 **over-merges**: 1,829 sets against 2,509 expert sets,
 B-cubed P 0.71, R 0.81, F 0.75. This is the opposite of Mayan, where it
 over-split.
 
-Provisional results at 1.8 to 3M of 10M states (root ESS 325 to 411):
+Results at 10M states (root ESS 1,491 to 1,801; the loans-removed run at 5.2M states, ESS 932):
 
 | Coding | Sets | Singleton share | Root, median BP (95% HPD) | Loss rate |
 |---|---|---|---|---|
-| IE-CoR expert | 2,509 | 0.56 | **7502** (6777 to 8074) | 1.8e-4 |
-| expert + only LexStat's splits | 3,111 | 0.62 | 7641 (7109 to 8257) | 2.4e-4 |
-| expert + only LexStat's merges | 1,243 | 0.30 | **6012** (5101 to 6853) | 2.2e-4 |
-| LexStat | 1,829 | 0.31 | **5367** (4880 to 5934) | 3.3e-4 |
-| expert, forms in IE-CoR loan sets removed | 2,093 | 0.52 | 8271 (7360 to 9081), ESS 89 | 1.5e-4 |
+| IE-CoR expert | 2,509 | 0.56 | **7528** (6985 to 8162) | 1.8e-4 |
+| expert + only LexStat's splits | 3,111 | 0.62 | 7671 (7104 to 8224) | 2.4e-4 |
+| expert + only LexStat's merges | 1,243 | 0.30 | **5947** (5039 to 6826) | 2.2e-4 |
+| LexStat | 1,829 | 0.31 | **5364** (4867 to 5898) | 3.3e-4 |
+| expert, forms in IE-CoR loan sets removed | 2,093 | 0.52 | 8292 (7438 to 9055) | 1.5e-4 |
 
-- Automated coding again makes the root about 2,100 years younger on identical
+- Automated coding again makes the root about 2,160 years younger on identical
   words, so the headline effect replicates in a second family. The expert root
   sits between the Steppe and Anatolian hypotheses, near Heggarty et al.'s
   (2023) c. 8,100 BP. That is reassuring, but the calibrations are draft.
 - The error type that does the damage differs. On IE, LexStat's merges move
-  the root young by about 1,500 years and its splits do almost nothing. On
+  the root young by about 1,580 years and its splits do almost nothing. On
   Mayan, splits did the damage.
 - This qualifies 5c. There, the merge-only and expert runs both sat at the
   root prior's upper bound, so "merges are harmless" was not actually tested.
@@ -652,8 +652,8 @@ Provisional results at 1.8 to 3M of 10M states (root ESS 325 to 411):
   errors that remove change between distant branches: spurious merges across
   branches (IE), which act like borrowing. Subgroup-sized splits fall in
   between (6s).
-- Removing the expert-identified loans makes the root *older* (provisional,
-  low ESS). This is the direction borrowing predicts (milestones 2 and 6),
+- Removing the expert-identified loans makes the root *older*, by about
+  760 years, with overlapping intervals. This is the direction borrowing predicts (milestones 2 and 6),
   and the first real-data check of it. Removing whole loan sets also drops
   the donor's inherited forms when the donor is in the sample, so this is a
   rough test.
