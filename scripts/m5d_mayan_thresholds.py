@@ -98,14 +98,46 @@ def cmd_summarise(a) -> None:
               f"ESS {r['ess']:.0f}; loss {r['loss']:.2e}{extra}{'' if r['done'] else ' (RUNNING)'}")
 
 
+def cmd_figure(a) -> None:
+    """Both families: root age against LexStat threshold, with the expert reference."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    may = json.loads((OUT / "summary.json").read_text())
+    ie = json.loads((ROOT / "data/derived/m7/summary.json").read_text())
+    ie_stats = json.loads((ROOT / "data/derived/m7/coding_stats.json").read_text())
+    panels = [("Mayan (ASJP, 27 languages): LexStat over-splits",
+               [(0.45, may["full_t45"]), (0.55, may["full_t55"]), (0.65, may["full_t65"]),
+                (0.75, may["full_t75 (5c full_lexstat)"])], may["hybrid (5c)"], "Kaufman's etyma where known (hybrid)"),
+              ("Indo-European (IE-CoR, 40 languages): LexStat over-merges",
+               [(ie_stats[n]["threshold"], ie[n]["Tree.height"]) for n in ("lexstat_t45", "lexstat_t55", "lexstat_t65",
+                                                                          "lexstat")], ie["expert"]["Tree.height"],
+               "IE-CoR expert sets")]
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+    for ax, (title, pts, ref, lab) in zip(axs, panels):
+        ax.axhspan(*ref["hpd"], color="#2a7f62", alpha=0.15, label=lab + ", 95% HPD")
+        ax.axhline(ref["median"], color="#2a7f62", lw=1)
+        for t, r in pts:
+            ax.plot([t, t], r["hpd"], color="#4a7bb7", lw=3)
+            ax.plot(t, r["median"], "o", color="#4a7bb7")
+        ax.set_xlabel("LexStat threshold (lower = higher precision, more splitting)")
+        ax.set_title(title, fontsize=9)
+        ax.legend(fontsize=7, loc="lower left")
+    axs[0].set_ylabel("root age, BP (draft calibrations)")
+    fig.tight_layout()
+    fig.savefig(ROOT / "figures/m5d_m7_thresholds.png", dpi=150)
+    print("figure -> figures/m5d_m7_thresholds.png")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("prepare")
     p = sub.add_parser("run"); p.add_argument("--jobs", type=int, default=3)
     sub.add_parser("summarise")
+    sub.add_parser("figure")
     a = ap.parse_args()
-    {"prepare": cmd_prepare, "run": cmd_run, "summarise": cmd_summarise}[a.cmd](a)
+    {"prepare": cmd_prepare, "run": cmd_run, "summarise": cmd_summarise, "figure": cmd_figure}[a.cmd](a)
 
 
 if __name__ == "__main__":

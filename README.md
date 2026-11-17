@@ -682,7 +682,33 @@ then `run` and `summarise`; 3M states, root ESS 331 to 521;
 - There is no universal fix. On Mayan, LexStat already over-splits and its
   splits do the damage (5c), and thresholds 0.65 to 0.85 did not help (5).
   The safe direction depends on which error a family is prone to. "Tune for
-  precision" works on IE but would make Mayan worse.
+  precision" works on IE but would make Mayan worse. Milestone 5d confirms this.
+
+### Milestone 5d: the same threshold change makes Mayan worse
+
+`scripts/m5d_mayan_thresholds.py prepare|run|summarise|figure`;
+`data/derived/m5d`; `figures/m5d_m7_thresholds.png` shows both families. The
+setup is the 5c complete-list runs: 27 ASJP Mayan languages, all 1,317
+forms, the same calibrations and seed, 20M states, root ESS above 3,200.
+The 0.75 coding reproduces 5c's `full_lexstat` exactly (232 sets).
+
+| Threshold | Sets | Labelled forms: sets (gold 103), P, F | Proto-Mayan, median (95% HPD) |
+|---|---|---|---|
+| 0.45 | 481 | 345, 0.95, 0.63 | 532 BC (2030 to 3109 BP) |
+| 0.55 | 408 | 298, 0.94, 0.69 | 642 BC (2146 to 3198 BP) |
+| 0.65 | 325 | 231, 0.91, 0.76 | 851 BC (2302 to 3533 BP) |
+| 0.75 (5c) | 232 | 175, 0.88, 0.80 | 1175 BC (2501 to 3953 BP) |
+| Kaufman's etyma where known (5c hybrid) | 160 | | 2976 BC (3453 to 6659 BP) |
+
+Lowering the threshold, which fixed IE, makes Proto-Mayan steadily
+*younger* on Mayan, because it adds the error Mayan is already prone to:
+splits. No threshold reaches the expert interval, and on Mayan the best-F
+threshold is also the least biased. Across the two families, the same
+setting moves dates in opposite directions, and F does not track dating
+accuracy in either. A threshold tuned on one expert-coded family therefore
+cannot be carried over to another. This is the strongest argument so far
+for expert cognates, or for dating that accounts for uncertainty in the
+cognate coding.
 
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
