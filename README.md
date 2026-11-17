@@ -710,6 +710,55 @@ cannot be carried over to another. This is the strongest argument so far
 for expert cognates, or for dating that accounts for uncertainty in the
 cognate coding.
 
+### Milestone 8: correspondence-based detection, proof of concept (negative)
+
+`python scripts/m8_correspondence.py detect --family both [--edge-free]`;
+`data/derived/m8`. This is a minimal version of the comparative method's
+logic:
+
+1. Seeds are high-precision LexStat sets (0.45).
+2. Per-language-pair sound-class correspondences are learned from aligned seed
+   cognates (two rounds, shrunk towards family-wide counts).
+3. Every cross-language word pair of a concept is scored by its best
+   alignment under those log-odds. The score is a z-score against word pairs
+   of *different* concepts from the same two languages.
+4. Seed sets are merged by average linkage while the mean z is at least 2.
+   This criterion was fixed in advance and is the same for both families.
+
+| Coding | Mayan P / R / F (sets on labelled forms; gold 103) | IE P / R / F (sets; gold 2,509) |
+|---|---|---|
+| LexStat 0.65 | 0.910 / 0.648 / 0.757 (231) | 0.850 / 0.718 / 0.779 (2,690) |
+| LexStat 0.75 | 0.878 / 0.731 / 0.797 (175) | 0.707 / 0.805 / 0.753 (1,829) |
+| correspondences, z ≥ 2 | 0.925 / 0.649 / 0.762 (222) | 0.822 / 0.725 / 0.770 (2,575) |
+| correspondences, z ≥ 1 | 0.872 / 0.777 / 0.822 (149) | 0.628 / 0.834 / 0.716 (1,469) |
+| edge-free alignment, z ≥ 2 | 0.923 / 0.630 / 0.749 (228) | 0.805 / 0.700 / 0.749 (2,574) |
+
+In both families the detector lands on the same precision-recall frontier
+as LexStat. At the fixed z it behaves like LexStat 0.65, which dates too
+young in both families (5d, 7), so it was not dated. Aligning roots free of
+affixes did not help: unrelated words also align better, so the null rises
+with the real scores.
+
+Where it fails (`scripts/m8_missed.py` on true cognate pairs it leaves
+apart: 38% on Mayan, 59% on IE):
+
+- **Morphology.** About half of the missed pairs differ in length by 1.5x
+  or more, against about a fifth of found pairs. The experts code by root,
+  e.g. Jakaltek *hul* with Yucatec *hulel*, Ixil *b'ih* with Poqomchi
+  *b'inal*.
+- **Deep correspondences.** Confident seeds are mostly within subgroups,
+  so correspondences between distant branches are never learned. German
+  *Fuß* with Sardinian *pe* is regular (Germanic f to Latin p), yet it
+  scored below chance (z = -0.78).
+
+The comparative method gets deep correspondences through reconstructed
+ancestors: Germanic and Latin each relate to Proto-Indo-European, not
+directly to each other. This proof of concept therefore narrows what the
+proposed model needs. Correspondences must be modelled along the tree, as
+sound change on branches. Cognacy must be judged at the level of the root
+or morpheme, not the whole word. Pairwise similarity, however it is
+calibrated, sits on the frontier LexStat already occupies.
+
 ### Milestone 5c: on real data, cognate coding alone moves the root by millennia
 
 `scripts/m5c_asjp_expert.py`: the ASJP Mayan words recoded with Kaufman's
